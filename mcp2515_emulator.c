@@ -2,17 +2,7 @@
 #include <stdint.h>
 #include <string.h>
 
-#include <libopencm3/cm3/nvic.h>
-#include <libopencm3/cm3/scb.h>
-#include <libopencm3/cm3/sync.h>
-#include <libopencm3/stm32/exti.h>
-#include <libopencm3/stm32/gpio.h>
-#include <libopencm3/stm32/rcc.h>
-#include <libopencm3/stm32/spi.h>
-
 #include <mcp2515_emulator.h>
-#include <usart_dma.h>
-#include <antirtos_c_wrapper.h>
 
 #define MCP251x_SPI_CMD_RESET_BASE 0xC
 #define MCP251x_SPI_CMD_RESET_CMD  0x0
@@ -47,8 +37,14 @@
 #define MCP251x_SPI_CMD_RX_STATUS_BASE 0xB
 #define MCP251x_SPI_CMD_RX_STATUS_CMD 0x0
 
+static uint8_t canstat_read_access(mcp251x_td *mcp251x)
+{
+    /* just return the value for now */
+    return mcp251x->regs[MCP251x_REG_CANSTAT_H][MCP251x_REG_CANSTAT_L];
+}
+
 /* handles SPI address */
-static inline uint8_t handle_spi_access(mcp251x_td *mcp251x, uint8_t spi_data)
+static uint8_t handle_spi_access(mcp251x_td *mcp251x, uint8_t spi_data)
 {
     (void) spi_data;
     uint8_t outdata = 0;
@@ -69,11 +65,15 @@ static inline uint8_t handle_spi_access(mcp251x_td *mcp251x, uint8_t spi_data)
             break;
     }
 
+    mcp251x->special_reg_access_read_cb = NULL;
+    mcp251x->special_reg_access_write_cb = NULL;
+    mcp251x->spi_state = MCP2515_SPI_STATE_SPI_CMD;
+
     return outdata;
 }
 
 /* handles SPI address */
-static inline uint8_t handle_spi_addr(mcp251x_td *mcp251x, uint8_t spi_data)
+static uint8_t handle_spi_addr(mcp251x_td *mcp251x, uint8_t spi_data)
 {
     uint8_t higher_order_addr = (spi_data >> 4);
     uint8_t lower_order_addr = (spi_data & 0xF);
@@ -97,9 +97,15 @@ static inline uint8_t handle_spi_addr(mcp251x_td *mcp251x, uint8_t spi_data)
             /* REC */
             /* EFLG */
             break;
+        case 0xE:
+            /* CANSTAT */
+            mcp251x->special_reg_access_read_cb = canstat_read_access;
+            break;
         default:
             break;
     }
+
+    mcp251x->spi_state = MCP2515_SPI_STATE_SPI_ACCESS;
 
     (void) mcp251x;
 
@@ -108,12 +114,19 @@ static inline uint8_t handle_spi_addr(mcp251x_td *mcp251x, uint8_t spi_data)
 
 uint8_t mcp251x_spi_cmd_reset(mcp251x_td *mcp251x)
 {
-    (void) mcp251x;
+    MCP251x_SET_OPMODE(mcp251x->regs[MCP251x_REG_CANSTAT_H][MCP251x_REG_CANSTAT_L], MCP251x_OPMODE_CONFIG);
+    MCP251x_SET_OPMODE(mcp251x->regs[MCP251x_REG_CANCTRL_H][MCP251x_REG_CANCTRL_L], MCP251x_OPMODE_CONFIG);
+    MCP251x_CANCTRL_SET_CLKPRE(mcp251x->regs[MCP251x_REG_CANCTRL_H][MCP251x_REG_CANCTRL_L], MCP251x_CANCTRL_CLKPRE_DIV8);
+    MCP251x_SET_BIT(mcp251x->regs[MCP251x_REG_CANCTRL_H][MCP251x_REG_CANCTRL_L], MCP251x_CANCTRL_CLKEN);
+
+    /* Set back to 'idle' after reset */
+    mcp251x->spi_state = MCP2515_SPI_STATE_SPI_CMD;
+
     return 0;
 }
 
 /* handles base SPI commands */
-static inline uint8_t handle_spi_cmd(mcp251x_td *mcp251x, uint8_t spi_data)
+static uint8_t handle_spi_cmd(mcp251x_td *mcp251x, uint8_t spi_data)
 {
     uint8_t base_cmd = (spi_data >> 4);
     uint8_t sub_cmd = (spi_data & 0xF);
@@ -139,10 +152,9 @@ static inline uint8_t handle_spi_cmd(mcp251x_td *mcp251x, uint8_t spi_data)
                     mcp251x->spi_access_type = MCP2515_SPI_ACCESS_MODIFY;
                     break;
             }
+            mcp251x->spi_state = MCP2515_SPI_STATE_SPI_ADDRESS;
             break;
     }
-
-    mcp251x->spi_state = MCP2515_SPI_STATE_SPI_ADDRESS;
 
     return spi_out;
 }

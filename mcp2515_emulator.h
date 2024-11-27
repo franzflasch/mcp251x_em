@@ -70,9 +70,15 @@
 #define MCP251x_READ_CMD 0x03
 
 /* MCP251 SPI Register addresses */
-#define MCP251x_REG_CANSTAT 0x0E
-#define MCP251x_REG_CANCTRL 0x0F
-#define MCP251x_REG_CANINTE 0x2B
+#define MCP251x_H_ORDER_ADDRS 8
+#define MCP251x_L_ORDER_ADDRS 16
+#define MCP251x_REG_CANSTAT_H 0x0 /* don't care in this case */
+#define MCP251x_REG_CANSTAT_L 0xE
+#define MCP251x_REG_CANCTRL_H 0x0 /* don't care in this case */
+#define MCP251x_REG_CANCTRL_L 0xF
+
+//#define MCP251x_REG_CANCTRL 0x0F
+//#define MCP251x_REG_CANINTE 0x2B
 
 typedef enum
 {
@@ -108,7 +114,7 @@ typedef struct mcp251x_struct
     uint8_t reg_addr_h;
     uint8_t reg_addr_l;
     uint8_t modify_mask;
-    uint8_t regs[8][16];
+    uint8_t regs[MCP251x_H_ORDER_ADDRS][MCP251x_L_ORDER_ADDRS];
     uint8_t (*special_reg_access_read_cb)(mcp251x_td *mcp251x);
     uint8_t (*special_reg_access_write_cb)(mcp251x_td *mcp251x, uint8_t data, uint8_t mask);
 
