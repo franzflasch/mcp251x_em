@@ -76,15 +76,6 @@
 
 typedef enum
 {
-    MCP2515_SPI_STATE_IDLE = 0x00,
-    MCP2515_SPI_STATE_IN_READ,
-    MCP2515_SPI_STATE_IN_WRITE1,
-    MCP2515_SPI_STATE_IN_WRITE2,
-
-} MCP251x_SPI_STATE;
-
-typedef enum
-{
     MCP251x_OPMODE_NORMAL = 0x00,
     MCP251x_OPMODE_SLEEP = 0x01,
     MCP251x_OPMODE_LOOPBACK = 0x02,
@@ -93,26 +84,37 @@ typedef enum
 
 } MCP251x_OPMODE;
 
+typedef enum
+{
+    MCP2515_SPI_STATE_SPI_CMD = 0x00,
+    MCP2515_SPI_STATE_SPI_ADDRESS,
+    MCP2515_SPI_STATE_SPI_ACCESS,
+
+} MCP251x_SPI_STATE;
+
+typedef enum
+{
+    MCP2515_SPI_ACCESS_READ = 0x00,
+    MCP2515_SPI_ACCESS_WRITE,
+    MCP2515_SPI_ACCESS_MODIFY,
+
+} MCP251x_SPI_ACCESS_TYPE;
+
+typedef struct mcp251x_struct mcp251x_td;
 typedef struct mcp251x_struct
 {
     MCP251x_SPI_STATE spi_state;
-    uint8_t write_reg;
-
-    /* requested opmode */
-    MCP251x_OPMODE req_opmode;
-    /* actual opmode */
-    MCP251x_OPMODE opmode;
-    int clken;
-    int clkpre;
-
-    uint8_t reg_CANSTAT;
-    uint8_t reg_CANCTRL;
-    uint8_t reg_CANINTE;
+    MCP251x_SPI_ACCESS_TYPE spi_access_type;
+    uint8_t reg_addr_h;
+    uint8_t reg_addr_l;
+    uint8_t modify_mask;
+    uint8_t regs[8][16];
+    uint8_t (*special_reg_access_read_cb)(mcp251x_td *mcp251x);
+    uint8_t (*special_reg_access_write_cb)(mcp251x_td *mcp251x, uint8_t data, uint8_t mask);
 
 } mcp251x_td;
 
 void mcp2515_emu_init(mcp251x_td *mcp251x);
-
 void mcp2515_emu_rx_buf_process(void);
 
 #endif /* MCP2515_EMULATOR_H */
