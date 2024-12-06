@@ -329,7 +329,6 @@ static inline void handle_spi_write(mcp251x_td *mcp251x, uint8_t spi_data)
         default:
             break;
     }
-    // mcp251x->spi_state = MCP2515_SPI_STATE_SPI_CMD;
 }
 
 static inline void handle_load_tx(mcp251x_td *mcp251x, uint8_t spi_data)
@@ -416,18 +415,30 @@ static inline uint8_t handle_spi_addr(mcp251x_td *mcp251x, uint8_t spi_data)
             outdata=canctrl_read(mcp251x);
             mcp251x->ctrl_reg = CANCTRL;
             break;
+        /* TEC */
+        /* REC */
+        /* CNF3 */
+        case MCP251x_REG_CNF3_L:
+            break;
+        /* CNF2 */
+        case MCP251x_REG_CNF2_L:
+            break;
+        /* CNF1 */
+        case MCP251x_REG_CNF1_L:
+            break;
         case MCP251x_REG_CANINTE_L:
             /* CANCTRL */
             outdata=caninte_read(mcp251x);
             mcp251x->ctrl_reg = CANCTRL;
             break;
-        case MCP251x_REG_CNF1_L:
-            break;
-        case MCP251x_REG_CNF2_L:
-            break;
-        case MCP251x_REG_CNF3_L:
-            break;
+        /* CANINTF */
+        /* EFLG */
         case MCP251x_SPI_CMD_TXBx_RXBx_CTRL_BASE:
+            /* TXB0 */
+            /* TXB1 */
+            /* TXB2 */
+            /* RXB0 */
+            /* RXB1 */
             break;
         default:
             printf("unknown address! %x\r\n", spi_data);
@@ -453,8 +464,6 @@ static inline uint8_t mcp251x_spi_cmd_reset(mcp251x_td *mcp251x)
 
     return 0;
 }
-
-#include <libopencm3/stm32/gpio.h>
 
 /* handles base SPI commands */
 static inline uint8_t handle_spi_cmd(mcp251x_td *mcp251x, uint8_t spi_data)
@@ -525,34 +534,30 @@ static inline uint8_t handle_spi_cmd(mcp251x_td *mcp251x, uint8_t spi_data)
     return spi_out;
 }
 
+#include <libopencm3/stm32/gpio.h>
+
 uint8_t mcp251x_spi_isr_handler(mcp251x_td *mcp251x, uint8_t spi_data)
 {
     uint8_t outdata = 0;
+
+    gpio_set(GPIOB, GPIO11);
 
     switch(mcp251x->spi_state)
     {
         case MCP2515_SPI_STATE_SPI_CMD:
             gpio_set(GPIOB, GPIO10);
 
-            gpio_set(GPIOB, GPIO11);
             outdata = handle_spi_cmd(mcp251x, spi_data);
-            gpio_clear(GPIOB, GPIO11);
             break;
         case MCP2515_SPI_STATE_SPI_ADDRESS:
-            gpio_set(GPIOB, GPIO11);
             outdata = handle_spi_addr(mcp251x, spi_data);
-            gpio_clear(GPIOB, GPIO11);
             break;
         case MCP2515_SPI_STATE_SPI_WRITE:
-            gpio_set(GPIOB, GPIO11);
             handle_spi_write(mcp251x, spi_data);
-            gpio_clear(GPIOB, GPIO11);
             break;
         case MCP2515_SPI_STATE_SPI_BIT_MODIFY:
-            gpio_set(GPIOB, GPIO11);
             mcp251x->modify_mask = spi_data;
             mcp251x->spi_state = MCP2515_SPI_STATE_SPI_WRITE;
-            gpio_clear(GPIOB, GPIO11);
         case MCP2515_SPI_STATE_SPI_READ_DUMMY:
             break;
         case MCP2515_SPI_STATE_SPI_LOAD_TX:
@@ -562,6 +567,8 @@ uint8_t mcp251x_spi_isr_handler(mcp251x_td *mcp251x, uint8_t spi_data)
             outdata = 0;
             break;
     }
+
+    gpio_clear(GPIOB, GPIO11);
 
     return outdata;
 }
@@ -580,6 +587,13 @@ void mcp251x_spi_emu_init(mcp251x_td *mcp251x, void (*can_tx_irq_cb)(void *priv)
     task_queue_init(&mcp251x->can_tx_irq_queue, 5);
 }
 
+
+
+
+
+
+
+/************ DEBUG BUFFER TRACE *****************/
 
 #define DECODE_BIT(val, bitmask, name) (((val) & (bitmask)) ? (name) : "x")
 
