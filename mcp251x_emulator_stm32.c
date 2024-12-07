@@ -51,7 +51,9 @@ void spi1_isr(void)
     spi_send8(SPI1, outdata);
     gpio_clear(GPIOB, GPIO11);
 
-    mcp251x_emu_rx_trace_buf_add_data(&rx_trace_buffer, indata);
+    #ifdef ENABLE_RX_TRACE_BUF
+        mcp251x_emu_rx_trace_buf_add_data(&rx_trace_buffer, indata);
+    #endif
 }
 
 /* EXTI4 Interrupt Service Routine */
@@ -62,7 +64,9 @@ void exti4_isr(void)
         /* reset mcp state machine */
         mcp251x_reset_state(mcp251x_ref);
 
-        mcp251x_emu_rx_trace_buf_add(&rx_trace_buffer);
+        #ifdef ENABLE_RX_TRACE_BUF
+            mcp251x_emu_rx_trace_buf_add(&rx_trace_buffer);
+        #endif
 
         exti_reset_request(EXTI4);
     }

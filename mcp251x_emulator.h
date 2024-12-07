@@ -4,6 +4,8 @@
 #include <stdint.h>
 #include <task_queue.h>
 
+#define ENABLE_RX_TRACE_BUF
+
 #define MCP251x_TXB_RXB_REG_SIZE 13
 
 typedef enum

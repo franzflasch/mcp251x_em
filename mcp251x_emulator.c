@@ -582,6 +582,8 @@ void mcp251x_spi_emu_init(mcp251x_td *mcp251x, void (*can_tx_irq_cb)(void *priv)
     task_queue_init(&mcp251x->can_tx_irq_queue, 5);
 
     mcp251x->set_irq_cb = set_irq_cb;
+
+    mcp251x_reset_state(mcp251x);
 }
 
 void mcp251x_emu_can_tx_irq_process(mcp251x_td *mcp251x)
