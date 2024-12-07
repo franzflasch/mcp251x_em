@@ -535,8 +535,6 @@ static inline uint8_t handle_spi_cmd(mcp251x_td *mcp251x, uint8_t spi_data)
     return spi_out;
 }
 
-#include <libopencm3/stm32/gpio.h>
-
 uint8_t mcp251x_spi_isr_handler(mcp251x_td *mcp251x, uint8_t spi_data)
 {
     uint8_t outdata = 0;
