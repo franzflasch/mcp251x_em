@@ -1,28 +1,28 @@
-#ifndef MCP2515_EMULATOR_H
-#define MCP2515_EMULATOR_H
+#ifndef mcp251x_EMULATOR_H
+#define mcp251x_EMULATOR_H
 
 #include <stdint.h>
 #include <task_queue.h>
 
-#define MCP251x_TXB_RXB_REG_SIZE 15
+#define MCP251x_TXB_RXB_REG_SIZE 13
 
 typedef enum
 {
-    MCP2515_SPI_STATE_SPI_CMD = 0x00,
-    MCP2515_SPI_STATE_SPI_ADDRESS,
-    MCP2515_SPI_STATE_SPI_WRITE,
-    MCP2515_SPI_STATE_SPI_BIT_MODIFY,
-    MCP2515_SPI_STATE_SPI_READ_DUMMY,
-    MCP2515_SPI_STATE_SPI_LOAD_TX,
-    MCP2515_SPI_STATE_SPI_READ_STATUS,
+    mcp251x_SPI_STATE_SPI_CMD = 0x00,
+    mcp251x_SPI_STATE_SPI_ADDRESS,
+    mcp251x_SPI_STATE_SPI_WRITE,
+    mcp251x_SPI_STATE_SPI_BIT_MODIFY,
+    mcp251x_SPI_STATE_SPI_READ_DUMMY,
+    mcp251x_SPI_STATE_SPI_LOAD_TX,
+    mcp251x_SPI_STATE_SPI_READ_STATUS,
 
 } MCP251x_SPI_STATE;
 
 typedef enum
 {
-    MCP2515_SPI_ACCESS_READ = 0x00,
-    MCP2515_SPI_ACCESS_WRITE,
-    MCP2515_SPI_ACCESS_MODIFY,
+    mcp251x_SPI_ACCESS_READ = 0x00,
+    mcp251x_SPI_ACCESS_WRITE,
+    mcp251x_SPI_ACCESS_MODIFY,
 
 } MCP251x_SPI_ACCESS_TYPE;
 
@@ -54,6 +54,7 @@ typedef struct mcp251x_struct
 {
     task_queue_td can_tx_irq_queue;
     void (*can_tx_irq_queue_cb)(void *priv);
+    void (*set_irq_cb)(int high);
 
     MCP251x_SPI_STATE spi_state;
     MCP251x_SPI_ACCESS_TYPE spi_access_type;
@@ -109,11 +110,11 @@ typedef struct mcp251x_struct
 
 } mcp251x_td;
 
-void mcp2515_emu_rx_buf_process(void);
+void mcp251x_emu_rx_buf_process(void);
 uint8_t mcp251x_spi_isr_handler(mcp251x_td *mcp251x, uint8_t spi_data);
 void mcp251x_reset_state(mcp251x_td *mcp251x);
-void mcp251x_spi_emu_init(mcp251x_td *mcp251x, void (*can_tx_irq_cb)(void *priv));
-
+void mcp251x_spi_emu_init(mcp251x_td *mcp251x, void (*can_tx_irq_cb)(void *priv), void (*set_irq_cb)(int high));
+void mcp251x_emu_can_tx_irq_process(mcp251x_td *mcp251x);
 
 
 /* Buffer Configuration */
@@ -121,22 +122,26 @@ void mcp251x_spi_emu_init(mcp251x_td *mcp251x, void (*can_tx_irq_cb)(void *priv)
 #define RX_TRACE_BUF_SIZE    64
 
 /* Receive Buffer Structure */
-typedef struct rx_buf_struct 
+typedef struct buf_struct 
 {
     int msg_len;
-    uint8_t trace_buf[RX_TRACE_BUF_SIZE];
-} rx_buf_td;
+    uint8_t buf[RX_TRACE_BUF_SIZE];
 
-typedef struct rx_buffer_struct 
+} buf_td;
+
+typedef struct trace_buffer_struct 
 {
-    unsigned int rx_buf_write_location;
-    unsigned int rx_buf_read_location;
-    rx_buf_td rx_trace_buf[RX_TRACE_BUF_ELEMENTS];
-    unsigned int rx_buf_count;
-    // fQ_t *rx_buf_queue;
+    unsigned int buf_write_location;
+    unsigned int buf_read_location;
+    buf_td trace_buf[RX_TRACE_BUF_ELEMENTS];
+    unsigned int buf_count;
+    task_queue_td buf_task_queue;
 
-} rx_buffer_t;
+} trace_buffer_t;
 
-void rx_buf_trace_queue_cb(void);
+void mcp251x_emu_rx_trace_buf_init(trace_buffer_t *rx_trace_buffer);
+void mcp251x_emu_rx_trace_buf_add(trace_buffer_t *rx_trace_buffer);
+void mcp251x_emu_rx_trace_buf_add_data(trace_buffer_t *rx_trace_buffer, uint8_t indata);
+void mcp251x_emu_rx_trace_buf_process(trace_buffer_t *rx_trace_buffer);
 
-#endif /* MCP2515_EMULATOR_H */
+#endif /* mcp251x_EMULATOR_H */

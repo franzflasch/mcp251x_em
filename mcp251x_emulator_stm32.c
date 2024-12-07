@@ -12,50 +12,13 @@
 #include <libopencm3/stm32/spi.h>
 
 #include <usart_dma.h>
-#include <antirtos_c_wrapper.h>
 
-#include <mcp2515_emulator_stm32.h>
+#include <mcp251x_emulator_stm32.h>
 
-// /* Buffer Configuration */
-#define RX_TRACE_BUF_ELEMENTS 256
-#define RX_TRACE_BUF_SIZE    64
-
-extern rx_buffer_t rx_buffer;
-static fQ_t *rx_buf_queue;
+static trace_buffer_t rx_trace_buffer = {0};
 static mcp251x_td *mcp251x_ref = NULL;
 
-/* Initialize Receive Buffer Queue */
-void mcp2515_emu_rx_buf_init(void)
-{
-    rx_buf_queue = fQ_create(RX_TRACE_BUF_ELEMENTS);
-    if (rx_buf_queue == NULL) 
-    {
-        /* Handle queue creation failure */
-        printf("Error: Failed to create receive buffer queue.\r\n");
-        /* Implement fallback or reset mechanisms as needed */
-    }
-}
-
-/* Deinitialize Receive Buffer Queue */
-void mcp2515_emu_rx_buf_deinit(void)
-{
-    if (rx_buf_queue != NULL) 
-    {
-        fQ_destroy(rx_buf_queue);
-        rx_buf_queue = NULL;
-    }
-}
-
-/* Process Receive Buffer Queue */
-void mcp2515_emu_rx_buf_process(void)
-{
-    if (rx_buf_queue != NULL) 
-    {
-        fQ_pull(rx_buf_queue);
-    }
-}
-
-void can_tx_send_done(void *priv)
+void can_tx_cb(void *priv)
 {
     (void) priv;
     int i = 0;
@@ -69,12 +32,12 @@ void can_tx_send_done(void *priv)
     /* Fake txf interrupt here */
     /* trigger interrupt */
     mcp251x_ref->tx0if = 1;
-    gpio_clear(GPIOB, GPIO10);
+    mcp251x_ref->set_irq_cb(0);
 }
 
-void mcp2515_emu_can_tx_irq_process(mcp251x_td *mcp251x)
+void mcp251x_emu_set_irq_cb(int high)
 {
-    task_queue_pull(&mcp251x->can_tx_irq_queue);
+    high ? gpio_set(GPIOB, GPIO10) : gpio_clear(GPIOB, GPIO10);
 }
 
 /* SPI1 Interrupt Service Routine */
@@ -83,23 +46,12 @@ void spi1_isr(void)
     uint8_t indata = spi_read8(SPI1);
     uint8_t outdata = 0;
 
+    gpio_set(GPIOB, GPIO11);
     outdata = mcp251x_spi_isr_handler(mcp251x_ref, indata);
-
     spi_send8(SPI1, outdata);
+    gpio_clear(GPIOB, GPIO11);
 
-    if (rx_buffer.rx_buf_count < RX_TRACE_BUF_SIZE) 
-    {
-        rx_buffer.rx_trace_buf[rx_buffer.rx_buf_write_location].trace_buf[rx_buffer.rx_buf_count++] = indata;
-        rx_buffer.rx_trace_buf[rx_buffer.rx_buf_write_location].msg_len = rx_buffer.rx_buf_count;
-    }
-    else 
-    {
-        /* Handle buffer overflow if necessary */
-        printf("Warning: RX buffer overflow. Data byte 0x%02x discarded.\r\n", indata);
-        /* Optionally, reset rx_buf_count or implement other overflow handling */
-    }
-
-    /* Optionally, handle SPI transmission here */
+    mcp251x_emu_rx_trace_buf_add_data(&rx_trace_buffer, indata);
 }
 
 /* EXTI4 Interrupt Service Routine */
@@ -110,26 +62,11 @@ void exti4_isr(void)
         /* reset mcp state machine */
         mcp251x_reset_state(mcp251x_ref);
 
-        rx_buffer.rx_buf_write_location = (rx_buffer.rx_buf_write_location + 1) % RX_TRACE_BUF_ELEMENTS;
-        rx_buffer.rx_buf_count = 0;
-
-        /* check if we are producing faster than the data can be read */
-        if(rx_buffer.rx_trace_buf[rx_buffer.rx_buf_write_location].msg_len)
-            printf("Warning: Too much data to process!\r\n");
-
-        if (rx_buf_queue != NULL) 
-        {
-            fQ_push(rx_buf_queue, rx_buf_trace_queue_cb);
-        } 
-        else 
-        {
-            printf("Error: Receive buffer queue is not initialized.\r\n");
-        }
+        mcp251x_emu_rx_trace_buf_add(&rx_trace_buffer);
 
         exti_reset_request(EXTI4);
     }
 }
-
 
 /* Setup for EXTI4 (GPIOA pin 4) */
 static void extipa4_setup(void)
@@ -155,12 +92,9 @@ static void extipa4_setup(void)
     exti_enable_request(EXTI4);
 }
 
-/* Initialize SPI1 for MCP2515 Emulator */
-void mcp2515_stm32_init(mcp251x_td *mcp251x)
+/* Initialize SPI1 for mcp251x Emulator */
+void mcp251x_stm32_init(mcp251x_td *mcp251x)
 {
-    /* Initialize Receive Buffer */
-    mcp2515_emu_rx_buf_init();
-
     /* Enable SPI1, GPIOA, and GPIOB clocks */
     rcc_periph_clock_enable(RCC_SPI1);
     rcc_periph_clock_enable(RCC_GPIOA);
@@ -194,10 +128,18 @@ void mcp2515_stm32_init(mcp251x_td *mcp251x)
     /* Enable SPI1 peripheral */
     spi_enable(SPI1);
 
-    /* Setup EXTI for MCP2515 Emulator */
+    /* Setup EXTI for mcp251x Emulator */
     extipa4_setup();
 
     mcp251x_ref = mcp251x;
 
-    mcp251x_spi_emu_init(mcp251x, can_tx_send_done);
+    mcp251x_spi_emu_init(mcp251x, can_tx_cb, mcp251x_emu_set_irq_cb);
+}
+
+trace_buffer_t *mcp251x_emu_stm32_trace_buf_init(void)
+{
+    /* Initialize Receive Buffer */
+    mcp251x_emu_rx_trace_buf_init(&rx_trace_buffer);
+
+    return &rx_trace_buffer;
 }

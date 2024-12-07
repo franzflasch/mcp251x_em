@@ -2,7 +2,7 @@
 #include <stdint.h>
 #include <string.h>
 
-#include <mcp2515_emulator.h>
+#include <mcp251x_emulator.h>
 
 #define MCP251x_BIT_SET(x, mask) (((x) & (mask)) != 0)
 #define MCP251x_SET_BIT(reg, bitmask)   ((reg) |= (bitmask))
@@ -56,25 +56,25 @@
 
 /* CANINTE Register Bits */
 /* Bit Masks */
-#define MCP251x_CANINTE_MERRE   (1 << 7)  // Bit 7: Message Error Interrupt Enable
-#define MCP251x_CANINTE_WAKIE   (1 << 6)  // Bit 6: Wake-up Interrupt Enable
-#define MCP251x_CANINTE_ERRIE   (1 << 5)  // Bit 5: Error Interrupt Enable
-#define MCP251x_CANINTE_TX2IE   (1 << 4)  // Bit 4: Transmit Buffer 2 Empty Interrupt Enable
-#define MCP251x_CANINTE_TX1IE   (1 << 3)  // Bit 3: Transmit Buffer 1 Empty Interrupt Enable
-#define MCP251x_CANINTE_TX0IE   (1 << 2)  // Bit 2: Transmit Buffer 0 Empty Interrupt Enable
-#define MCP251x_CANINTE_RX1IE   (1 << 1)  // Bit 1: Receive Buffer 1 Full Interrupt Enable
-#define MCP251x_CANINTE_RX0IE   (1 << 0)  // Bit 0: Receive Buffer 0 Full Interrupt Enable
+#define MCP251x_CANINTE_MERRE   (1 << 7) // Bit 7: Message Error Interrupt Enable
+#define MCP251x_CANINTE_WAKIE   (1 << 6) // Bit 6: Wake-up Interrupt Enable
+#define MCP251x_CANINTE_ERRIE   (1 << 5) // Bit 5: Error Interrupt Enable
+#define MCP251x_CANINTE_TX2IE   (1 << 4) // Bit 4: Transmit Buffer 2 Empty Interrupt Enable
+#define MCP251x_CANINTE_TX1IE   (1 << 3) // Bit 3: Transmit Buffer 1 Empty Interrupt Enable
+#define MCP251x_CANINTE_TX0IE   (1 << 2) // Bit 2: Transmit Buffer 0 Empty Interrupt Enable
+#define MCP251x_CANINTE_RX1IE   (1 << 1) // Bit 1: Receive Buffer 1 Full Interrupt Enable
+#define MCP251x_CANINTE_RX0IE   (1 << 0) // Bit 0: Receive Buffer 0 Full Interrupt Enable
 
 /* CANINTF Register Bits */
 /* Bit Masks */
-#define MCP251x_CANINTF_MERRF   (1 << 7)  // Bit 7: Message Error Interrupt Flag
-#define MCP251x_CANINTF_WAKIF   (1 << 6)  // Bit 6: Wake-up Interrupt Flag
-#define MCP251x_CANINTF_ERRIF   (1 << 5)  // Bit 5: Error Interrupt Flag
-#define MCP251x_CANINTF_TX2IF   (1 << 4)  // Bit 4: Transmit Buffer 2 Empty Interrupt Flag
-#define MCP251x_CANINTF_TX1IF   (1 << 3)  // Bit 3: Transmit Buffer 1 Empty Interrupt Flag
-#define MCP251x_CANINTF_TX0IF   (1 << 2)  // Bit 2: Transmit Buffer 0 Empty Interrupt Flag
-#define MCP251x_CANINTF_RX1IF   (1 << 1)  // Bit 1: Receive Buffer 1 Full Interrupt Flag
-#define MCP251x_CANINTF_RX0IF   (1 << 0)  // Bit 0: Receive Buffer 0 Full Interrupt Flag
+#define MCP251x_CANINTF_MERRF   (1 << 7) // Bit 7: Message Error Interrupt Flag
+#define MCP251x_CANINTF_WAKIF   (1 << 6) // Bit 6: Wake-up Interrupt Flag
+#define MCP251x_CANINTF_ERRIF   (1 << 5) // Bit 5: Error Interrupt Flag
+#define MCP251x_CANINTF_TX2IF   (1 << 4) // Bit 4: Transmit Buffer 2 Empty Interrupt Flag
+#define MCP251x_CANINTF_TX1IF   (1 << 3) // Bit 3: Transmit Buffer 1 Empty Interrupt Flag
+#define MCP251x_CANINTF_TX0IF   (1 << 2) // Bit 2: Transmit Buffer 0 Empty Interrupt Flag
+#define MCP251x_CANINTF_RX1IF   (1 << 1) // Bit 1: Receive Buffer 1 Full Interrupt Flag
+#define MCP251x_CANINTF_RX0IF   (1 << 0) // Bit 0: Receive Buffer 0 Full Interrupt Flag
 
 // CNF1 Register Bits (Address: 0x2A)
 #define MCP251x_CNF1_SJW1   (1 << 7) // Bit 7: Synchronization Jump Width bit 1
@@ -223,7 +223,6 @@ static inline uint8_t canstat_read(mcp251x_td *mcp251x)
 static inline uint8_t canstat_write(mcp251x_td *mcp251x, uint8_t data, uint8_t mask)
 {
     (void) mask;
-    printf("HIHIHI!\r\n");
     /* just return the value for now */
     mcp251x->canstat = data;
     return 0;
@@ -252,6 +251,7 @@ static inline uint8_t canctrl_write(mcp251x_td *mcp251x, uint8_t data, uint8_t m
 static inline uint8_t caninte_read(mcp251x_td *mcp251x)
 {
     uint8_t outdata = 0;
+
     if(mcp251x->merrf) MCP251x_SET_BIT(outdata, MCP251x_CANINTE_MERRE);
     if(mcp251x->wakif) MCP251x_SET_BIT(outdata, MCP251x_CANINTE_WAKIE);
     if(mcp251x->errif) MCP251x_SET_BIT(outdata, MCP251x_CANINTE_ERRIE);
@@ -284,6 +284,7 @@ static inline uint8_t caninte_write(mcp251x_td *mcp251x, uint8_t data, uint8_t m
 static inline uint8_t canintf_read(mcp251x_td *mcp251x)
 {
     uint8_t outdata = 0;
+
     if(mcp251x->merrf) MCP251x_SET_BIT(outdata, MCP251x_CANINTF_MERRF);
     if(mcp251x->wakif) MCP251x_SET_BIT(outdata, MCP251x_CANINTF_WAKIF);
     if(mcp251x->errif) MCP251x_SET_BIT(outdata, MCP251x_CANINTF_ERRIF);
@@ -372,19 +373,19 @@ static inline uint8_t handle_spi_addr(mcp251x_td *mcp251x, uint8_t spi_data)
     mcp251x->reg_addr_h = higher_order_addr;
     mcp251x->reg_addr_l = lower_order_addr;
 
-    if(mcp251x->spi_access_type == MCP2515_SPI_ACCESS_WRITE)
+    if(mcp251x->spi_access_type == mcp251x_SPI_ACCESS_WRITE)
     {
-        mcp251x->spi_state = MCP2515_SPI_STATE_SPI_WRITE;
+        mcp251x->spi_state = mcp251x_SPI_STATE_SPI_WRITE;
         mcp251x->modify_mask = 0xFF;
     }
-    else if(mcp251x->spi_access_type == MCP2515_SPI_ACCESS_MODIFY)
+    else if(mcp251x->spi_access_type == mcp251x_SPI_ACCESS_MODIFY)
     {
-        mcp251x->spi_state = MCP2515_SPI_STATE_SPI_BIT_MODIFY;
+        mcp251x->spi_state = mcp251x_SPI_STATE_SPI_BIT_MODIFY;
     }
     else
     {
         is_read = 1;
-        mcp251x->spi_state = MCP2515_SPI_STATE_SPI_READ_DUMMY;
+        mcp251x->spi_state = mcp251x_SPI_STATE_SPI_READ_DUMMY;
     }
 
     /* check if this is a control register */
@@ -460,7 +461,7 @@ static inline uint8_t mcp251x_spi_cmd_reset(mcp251x_td *mcp251x)
     MCP251x_SET_BIT(mcp251x->canctrl, MCP251x_CANCTRL_CLKEN);
 
     /* Set back to 'idle' after reset */
-    mcp251x->spi_state = MCP2515_SPI_STATE_SPI_CMD;
+    mcp251x->spi_state = mcp251x_SPI_STATE_SPI_CMD;
 
     return 0;
 }
@@ -482,49 +483,49 @@ static inline uint8_t handle_spi_cmd(mcp251x_td *mcp251x, uint8_t spi_data)
             switch(sub_cmd)
             {
                 case MCP251x_SPI_CMD_READ_CMD_SUB:
-                    mcp251x->spi_access_type = MCP2515_SPI_ACCESS_READ;
+                    mcp251x->spi_access_type = mcp251x_SPI_ACCESS_READ;
                     break;
                 case MCP251x_SPI_CMD_WRITE_CMD_SUB:
-                    mcp251x->spi_access_type = MCP2515_SPI_ACCESS_WRITE;
+                    mcp251x->spi_access_type = mcp251x_SPI_ACCESS_WRITE;
                     break;
                 case MCP251x_SPI_CMD_BIT_MODIFY_CMD_SUB:
-                    mcp251x->spi_access_type = MCP2515_SPI_ACCESS_MODIFY;
+                    mcp251x->spi_access_type = mcp251x_SPI_ACCESS_MODIFY;
                     break;
             }
-            mcp251x->spi_state = MCP2515_SPI_STATE_SPI_ADDRESS;
+            mcp251x->spi_state = mcp251x_SPI_STATE_SPI_ADDRESS;
             break;
         case MCP251x_SPI_CMD_LOAD_TX_BUFFER_BASE:
             switch(sub_cmd)
             {
                 case 0:
                     mcp251x->load_tx_addr_h = 3;
-                    mcp251x->load_tx_addr_l = 1;
+                    mcp251x->load_tx_addr_l = 0;
                     break;
                 case 1:
                     mcp251x->load_tx_addr_h = 3;
-                    mcp251x->load_tx_addr_l = 6;
+                    mcp251x->load_tx_addr_l = 5;
                     break;
                 case 2:
                     mcp251x->load_tx_addr_h = 4;
-                    mcp251x->load_tx_addr_l = 1;
+                    mcp251x->load_tx_addr_l = 0;
                     break;
                 case 3:
                     mcp251x->load_tx_addr_h = 4;
-                    mcp251x->load_tx_addr_l = 6;
+                    mcp251x->load_tx_addr_l = 5;
                     break;
                 case 4:
                     mcp251x->load_tx_addr_h = 5;
-                    mcp251x->load_tx_addr_l = 1;
+                    mcp251x->load_tx_addr_l = 0;
                     break;
                 case 5:
                     mcp251x->load_tx_addr_h = 5;
-                    mcp251x->load_tx_addr_l = 6;
+                    mcp251x->load_tx_addr_l = 5;
                     break;
             }
-            mcp251x->spi_state = MCP2515_SPI_STATE_SPI_LOAD_TX;
+            mcp251x->spi_state = mcp251x_SPI_STATE_SPI_LOAD_TX;
             break;
         case MCP251x_SPI_CMD_RX_STATUS_BASE:
-            mcp251x->spi_state = MCP2515_SPI_STATE_SPI_READ_STATUS;
+            mcp251x->spi_state = mcp251x_SPI_STATE_SPI_READ_STATUS;
             break;
         case MCP251x_SPI_CMD_RTS_BASE:
             task_queue_push(&mcp251x->can_tx_irq_queue, mcp251x->can_tx_irq_queue_cb, NULL);
@@ -540,77 +541,65 @@ uint8_t mcp251x_spi_isr_handler(mcp251x_td *mcp251x, uint8_t spi_data)
 {
     uint8_t outdata = 0;
 
-    gpio_set(GPIOB, GPIO11);
-
     switch(mcp251x->spi_state)
     {
-        case MCP2515_SPI_STATE_SPI_CMD:
-            gpio_set(GPIOB, GPIO10);
-
+        case mcp251x_SPI_STATE_SPI_CMD:
             outdata = handle_spi_cmd(mcp251x, spi_data);
             break;
-        case MCP2515_SPI_STATE_SPI_ADDRESS:
+        case mcp251x_SPI_STATE_SPI_ADDRESS:
             outdata = handle_spi_addr(mcp251x, spi_data);
             break;
-        case MCP2515_SPI_STATE_SPI_WRITE:
+        case mcp251x_SPI_STATE_SPI_WRITE:
             handle_spi_write(mcp251x, spi_data);
             break;
-        case MCP2515_SPI_STATE_SPI_BIT_MODIFY:
+        case mcp251x_SPI_STATE_SPI_BIT_MODIFY:
             mcp251x->modify_mask = spi_data;
-            mcp251x->spi_state = MCP2515_SPI_STATE_SPI_WRITE;
-        case MCP2515_SPI_STATE_SPI_READ_DUMMY:
+            mcp251x->spi_state = mcp251x_SPI_STATE_SPI_WRITE;
+        case mcp251x_SPI_STATE_SPI_READ_DUMMY:
             break;
-        case MCP2515_SPI_STATE_SPI_LOAD_TX:
+        case mcp251x_SPI_STATE_SPI_LOAD_TX:
             handle_load_tx(mcp251x, spi_data);
             break;
-        case MCP2515_SPI_STATE_SPI_READ_STATUS:
+        case mcp251x_SPI_STATE_SPI_READ_STATUS:
             outdata = 0;
             break;
     }
-
-    gpio_clear(GPIOB, GPIO11);
 
     return outdata;
 }
 
 void mcp251x_reset_state(mcp251x_td *mcp251x)
 {
-    mcp251x->spi_state = MCP2515_SPI_STATE_SPI_CMD;
+    mcp251x->set_irq_cb(1);
+    mcp251x->spi_state = mcp251x_SPI_STATE_SPI_CMD;
 }
 
-void mcp251x_spi_emu_init(mcp251x_td *mcp251x, void (*can_tx_irq_cb)(void *priv))
+void mcp251x_spi_emu_init(mcp251x_td *mcp251x, void (*can_tx_irq_cb)(void *priv), void (*set_irq_cb)(int high))
 {
     memset(mcp251x, 0, sizeof(mcp251x_td));
 
     mcp251x->can_tx_irq_queue_cb = can_tx_irq_cb;
-
     task_queue_init(&mcp251x->can_tx_irq_queue, 5);
+
+    mcp251x->set_irq_cb = set_irq_cb;
+}
+
+void mcp251x_emu_can_tx_irq_process(mcp251x_td *mcp251x)
+{
+    task_queue_pull(&mcp251x->can_tx_irq_queue);
 }
 
 
 
-
-
-
-
 /************ DEBUG BUFFER TRACE *****************/
-
 #define DECODE_BIT(val, bitmask, name) (((val) & (bitmask)) ? (name) : "x")
 
-/* Global Instance */
-volatile rx_buffer_t rx_buffer =
-{
-    .rx_buf_write_location = 0,
-    .rx_buf_read_location  = 0,
-    .rx_trace_buf         = {{0}},
-    .rx_buf_count         = 0,
-    // .rx_buf_queue         = NULL
-};
-
 /* Callback for Processing Received Data */
-void rx_buf_trace_queue_cb(void)
+void rx_buf_trace_queue_cb(void *priv)
 {
-    int msg_len = rx_buffer.rx_trace_buf[rx_buffer.rx_buf_read_location].msg_len;
+    trace_buffer_t *rx_trace_buffer = priv;
+
+    int msg_len = rx_trace_buffer->trace_buf[rx_trace_buffer->buf_read_location].msg_len;
     int curr_reg = 0;
     int curr_reg_val = 0;
 
@@ -621,12 +610,12 @@ void rx_buf_trace_queue_cb(void)
         msg_len = RX_TRACE_BUF_SIZE; /* Adjust as needed */
     }
 
-    printf("WR: %u RD: %u ", rx_buffer.rx_buf_write_location, rx_buffer.rx_buf_read_location);
+    printf("WR: %u RD: %u ", rx_trace_buffer->buf_write_location, rx_trace_buffer->buf_read_location);
     for(int i = 0; i < msg_len; i++)
     {
-        printf("%02x ", rx_buffer.rx_trace_buf[rx_buffer.rx_buf_read_location].trace_buf[i]);
+        printf("%02x ", rx_trace_buffer->trace_buf[rx_trace_buffer->buf_read_location].buf[i]);
         /* mark this buffer as read by setting the msg_len to 0 */
-        rx_buffer.rx_trace_buf[rx_buffer.rx_buf_read_location].msg_len = 0;
+        rx_trace_buffer->trace_buf[rx_trace_buffer->buf_read_location].msg_len = 0;
     }
 
     for(int i = 0; i < msg_len; i++)
@@ -634,7 +623,7 @@ void rx_buf_trace_queue_cb(void)
         /* CMD */
         if(i==0)
         {
-            switch(rx_buffer.rx_trace_buf[rx_buffer.rx_buf_read_location].trace_buf[0])
+            switch(rx_trace_buffer->trace_buf[rx_trace_buffer->buf_read_location].buf[0])
             {
                 case MCP251x_SPI_CMD_RESET:
                     printf("RST ");
@@ -652,13 +641,13 @@ void rx_buf_trace_queue_cb(void)
                 break;
             }
 
-            if( (rx_buffer.rx_trace_buf[rx_buffer.rx_buf_read_location].trace_buf[0] & MCP251x_SPI_CMD_LOAD_TX_BUFFER_MASK) == MCP251x_SPI_CMD_LOAD_TX_BUFFER)
+            if( (rx_trace_buffer->trace_buf[rx_trace_buffer->buf_read_location].buf[0] & MCP251x_SPI_CMD_LOAD_TX_BUFFER_MASK) == MCP251x_SPI_CMD_LOAD_TX_BUFFER)
                 printf("LOAD_TX ");
         }
         /* ADDRESS */
         else if(i==1)
         {
-            curr_reg = rx_buffer.rx_trace_buf[rx_buffer.rx_buf_read_location].trace_buf[1];
+            curr_reg = rx_trace_buffer->trace_buf[rx_trace_buffer->buf_read_location].buf[1];
             switch(curr_reg)
             {
                 case MCP251x_REG_CANCTRL:
@@ -691,7 +680,7 @@ void rx_buf_trace_queue_cb(void)
         }
         else if(i==2)
         {
-            curr_reg_val = rx_buffer.rx_trace_buf[rx_buffer.rx_buf_read_location].trace_buf[2];
+            curr_reg_val = rx_trace_buffer->trace_buf[rx_trace_buffer->buf_read_location].buf[2];
             switch(curr_reg)
             {
                 case MCP251x_REG_RXB1CTRL:
@@ -810,5 +799,42 @@ void rx_buf_trace_queue_cb(void)
 
     printf("\r\n");
 
-    rx_buffer.rx_buf_read_location = (rx_buffer.rx_buf_read_location + 1) % RX_TRACE_BUF_ELEMENTS;
+    rx_trace_buffer->buf_read_location = (rx_trace_buffer->buf_read_location + 1) % RX_TRACE_BUF_ELEMENTS;
+}
+
+void mcp251x_emu_rx_trace_buf_init(trace_buffer_t *rx_trace_buffer)
+{
+    task_queue_init(&rx_trace_buffer->buf_task_queue, RX_TRACE_BUF_ELEMENTS);
+}
+
+void mcp251x_emu_rx_trace_buf_add(trace_buffer_t *rx_trace_buffer)
+{
+    rx_trace_buffer->buf_write_location = (rx_trace_buffer->buf_write_location + 1) % RX_TRACE_BUF_ELEMENTS;
+    rx_trace_buffer->buf_count = 0;
+
+    /* check if we are producing faster than the data can be read */
+    if(rx_trace_buffer->trace_buf[rx_trace_buffer->buf_write_location].msg_len)
+        printf("Warning: Too much data to process!\r\n");
+
+    task_queue_push(&rx_trace_buffer->buf_task_queue, rx_buf_trace_queue_cb, rx_trace_buffer);
+}
+
+void mcp251x_emu_rx_trace_buf_add_data(trace_buffer_t *rx_trace_buffer, uint8_t indata)
+{
+    if (rx_trace_buffer->buf_count < RX_TRACE_BUF_SIZE) 
+    {
+        rx_trace_buffer->trace_buf[rx_trace_buffer->buf_write_location].buf[rx_trace_buffer->buf_count++] = indata;
+        rx_trace_buffer->trace_buf[rx_trace_buffer->buf_write_location].msg_len = rx_trace_buffer->buf_count;
+    }
+    else 
+    {
+        /* Handle buffer overflow if necessary */
+        printf("Warning: RX buffer overflow. Data byte 0x%02x discarded.\r\n", indata);
+        /* Optionally, reset buf_count or implement other overflow handling */
+    }
+}
+
+void mcp251x_emu_rx_trace_buf_process(trace_buffer_t *rx_trace_buffer)
+{
+    task_queue_pull(&rx_trace_buffer->buf_task_queue);
 }
