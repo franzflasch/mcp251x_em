@@ -440,6 +440,9 @@ static inline void handle_spi_write(mcp251x_td *mcp251x, uint8_t spi_data)
         case CANCTRL:
             canctrl_write(mcp251x, spi_data, mcp251x->modify_mask);
             break;
+        case CANINTE:
+            caninte_write(mcp251x, spi_data, mcp251x->modify_mask);
+            break;
         case CANINTF:
             canintf_write(mcp251x, spi_data, mcp251x->modify_mask);
             break;
@@ -546,7 +549,7 @@ static inline uint8_t handle_spi_addr(mcp251x_td *mcp251x, uint8_t spi_data)
         case MCP251x_REG_CANINTE_L:
             /* CANCTRL */
             outdata=caninte_read(mcp251x);
-            mcp251x->ctrl_reg = CANCTRL;
+            mcp251x->ctrl_reg = CANINTE;
             break;
         /* CANINTF */
         /* EFLG */
@@ -755,23 +758,17 @@ void mcp251x_emu_handle_txb_done(mcp251x_td *mcp251x, MCP251x_IRQ_FLAGS txb)
     mcp251x_emu_set_irq_flag(mcp251x, txb);
 
     if( (txb == INTERRUPT_TX0IF) && (mcp251x->tx0if) )
-    {
         /* clear TXREQ */
         MCP251x_CLEAR_BIT(mcp251x->txb0ctrl, MCP251x_TXBxCTRL_TXREQ);
-        mcp251x->set_irq_cb(0);
-    }
     else if( (txb == INTERRUPT_TX1IF) && (mcp251x->tx1if) )
-    {
         /* clear TXREQ */
         MCP251x_CLEAR_BIT(mcp251x->txb1ctrl, MCP251x_TXBxCTRL_TXREQ);
-        mcp251x->set_irq_cb(0);
-    }
     else if( (txb == INTERRUPT_TX2IF) && (mcp251x->tx2if) )
-    {
         /* clear TXREQ */
         MCP251x_CLEAR_BIT(mcp251x->txb2ctrl, MCP251x_TXBxCTRL_TXREQ);
+
+    if(mcp251x->tx0ie || mcp251x->tx1ie || mcp251x->tx2ie)
         mcp251x->set_irq_cb(0);
-    }
 }
 
 void mcp251x_emu_set_transmit_err_flag(mcp251x_td *mcp251x, MCP251x_CTRL_REGS txbnctrl, uint8_t flag)
