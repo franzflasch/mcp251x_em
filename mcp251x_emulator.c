@@ -808,8 +808,13 @@ void mcp251x_emu_handle_txb_error(mcp251x_td *mcp251x, MCP251x_CTRL_REGS txbnctr
 
     *reg_ptr |= MCP251x_TXB_flag_to_mask(flag);
 
-    if(mcp251x->merre & (*reg_ptr & MCP251x_CANINTE_MERRE))
-        mcp251x->set_irq_cb(0);
+    if((*reg_ptr & MCP251x_TXBxCTRL_TXERR))
+    {
+        canintf_write(mcp251x, MCP251x_CANINTF_MERRF, 0xFF);
+
+        if(mcp251x->merre)
+            mcp251x->set_irq_cb(0);
+    }
 }
 
 
