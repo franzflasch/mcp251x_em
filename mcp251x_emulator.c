@@ -771,26 +771,49 @@ void mcp251x_emu_handle_txb_done(mcp251x_td *mcp251x, MCP251x_IRQ_FLAGS txb)
         mcp251x->set_irq_cb(0);
 }
 
-void mcp251x_emu_set_transmit_err_flag(mcp251x_td *mcp251x, MCP251x_CTRL_REGS txbnctrl, uint8_t flag)
+static inline uint8_t MCP251x_TXB_flag_to_mask(MCP251x_TXB_ERROR_FLAGS flag)
 {
-    switch(txbnctrl)
+    switch (flag)
     {
-        case TXB0CTRL:
-            mcp251x->txb0ctrl |= flag;
-            break;
-        case TXB1CTRL:
-            mcp251x->txb1ctrl |= flag;
-            break;
-        case TXB2CTRL:
-            mcp251x->txb2ctrl |= flag;
-            break;
+        case ERR_ABTF:
+            return MCP251x_TXBxCTRL_ABTF;
+        case ERR_MLOA:
+            return MCP251x_TXBxCTRL_MLOA;
+        case ERR_TXERR:
+            return MCP251x_TXBxCTRL_TXERR;
+        case ERR_NONE:
         default:
-            break;
+            return 0; // No bits set
     }
 }
 
+void mcp251x_emu_handle_txb_error(mcp251x_td *mcp251x, MCP251x_CTRL_REGS txbnctrl, MCP251x_TXB_ERROR_FLAGS flag)
+{
+    uint8_t *reg_ptr = NULL;
 
-/************ DEBUG BUFFER TRACE *****************/
+    switch (txbnctrl) 
+    {
+        case TXB0CTRL:
+            reg_ptr = &mcp251x->txb0ctrl;
+            break;
+        case TXB1CTRL:
+            reg_ptr = &mcp251x->txb1ctrl;
+            break;
+        case TXB2CTRL:
+            reg_ptr = &mcp251x->txb2ctrl;
+            break;
+        default:
+            return; // No valid register selected
+    }
+
+    *reg_ptr |= MCP251x_TXB_flag_to_mask(flag);
+
+    if(mcp251x->merre & (*reg_ptr & MCP251x_CANINTE_MERRE))
+        mcp251x->set_irq_cb(0);
+}
+
+
+/************************************************* DEBUG BUFFER TRACE *************************************************/
 #define DECODE_BIT(val, bitmask, name) (((val) & (bitmask)) ? (name) : "x")
 
 /* Callback for Processing Received Data */

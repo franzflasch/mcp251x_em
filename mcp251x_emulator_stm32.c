@@ -29,7 +29,17 @@ void can_txb0_cb(void *priv)
         printf("%x\r\n", mcp251x_ref->txb0[i]);
     }
 
-    mcp251x_emu_handle_txb_done(mcp251x_ref, INTERRUPT_TX0IF);
+    /* TODO: handle error case */
+    //if(err)
+    // {
+        // mcp251x_emu_set_transmit_err_flag(mcp251x_ref, TXB0CTRL, ERR_ABTF);
+        // mcp251x_emu_set_transmit_err_flag(mcp251x_ref, TXB0CTRL, ERR_MLOA);
+        // mcp251x_emu_set_transmit_err_flag(mcp251x_ref, TXB0CTRL, ERR_TXERR);
+    // }
+    // else
+    // {
+        mcp251x_emu_handle_txb_done(mcp251x_ref, INTERRUPT_TX0IF);
+    // }
 }
 
 void can_txb1_cb(void *priv)
@@ -42,6 +52,11 @@ void can_txb1_cb(void *priv)
     {
         printf("%x\r\n", mcp251x_ref->txb1[i]);
     }
+
+    /* handle error cases */
+    // mcp251x_emu_set_transmit_err_flag(mcp251x_ref, TXB1CTRL, ERR_ABTF);
+    // mcp251x_emu_set_transmit_err_flag(mcp251x_ref, TXB1CTRL, ERR_MLOA);
+    // mcp251x_emu_set_transmit_err_flag(mcp251x_ref, TXB1CTRL, ERR_TXERR);
 
     mcp251x_emu_handle_txb_done(mcp251x_ref, INTERRUPT_TX1IF);
 }
@@ -56,6 +71,11 @@ void can_txb2_cb(void *priv)
     {
         printf("%x\r\n", mcp251x_ref->txb2[i]);
     }
+
+    /* handle error cases */
+    // mcp251x_emu_set_transmit_err_flag(mcp251x_ref, TXB2CTRL, ERR_ABTF);
+    // mcp251x_emu_set_transmit_err_flag(mcp251x_ref, TXB2CTRL, ERR_MLOA);
+    // mcp251x_emu_set_transmit_err_flag(mcp251x_ref, TXB2CTRL, ERR_TXERR);
 
     mcp251x_emu_handle_txb_done(mcp251x_ref, INTERRUPT_TX2IF);
 }

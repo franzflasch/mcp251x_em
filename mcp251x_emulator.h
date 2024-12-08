@@ -64,6 +64,15 @@ typedef enum
 
 } MCP251x_IRQ_FLAGS;
 
+typedef enum 
+{
+    ERR_NONE = 0,
+    ERR_ABTF,
+    ERR_MLOA,
+    ERR_TXERR,
+
+} MCP251x_TXB_ERROR_FLAGS;
+
 typedef struct mcp251x_struct mcp251x_td;
 typedef struct mcp251x_struct
 {
@@ -139,7 +148,7 @@ void mcp251x_spi_emu_init(mcp251x_td *mcp251x,
 void mcp251x_emu_can_tx_irq_process(mcp251x_td *mcp251x);
 void mcp251x_emu_set_irq_flag(mcp251x_td *mcp251x, MCP251x_IRQ_FLAGS irq_flag);
 void mcp251x_emu_handle_txb_done(mcp251x_td *mcp251x, MCP251x_IRQ_FLAGS txb);
-void mcp251x_emu_set_transmit_err_flag(mcp251x_td *mcp251x, MCP251x_CTRL_REGS txbnctrl, uint8_t flag);
+void mcp251x_emu_set_transmit_err_flag(mcp251x_td *mcp251x, MCP251x_CTRL_REGS txbnctrl, MCP251x_TXB_ERROR_FLAGS flag);
 
 
 /* Buffer Configuration */
