@@ -4,7 +4,7 @@
 #include <stdint.h>
 #include <task_queue.h>
 
-// #define ENABLE_RX_TRACE_BUF
+#define ENABLE_RX_TRACE_BUF
 
 #define MCP251x_TXB_RXB_REG_SIZE 13
 
@@ -139,6 +139,7 @@ void mcp251x_spi_emu_init(mcp251x_td *mcp251x,
 void mcp251x_emu_can_tx_irq_process(mcp251x_td *mcp251x);
 void mcp251x_emu_set_irq_flag(mcp251x_td *mcp251x, MCP251x_IRQ_FLAGS irq_flag);
 void mcp251x_emu_handle_txb_done(mcp251x_td *mcp251x, MCP251x_IRQ_FLAGS txb);
+void mcp251x_emu_set_transmit_err_flag(mcp251x_td *mcp251x, MCP251x_CTRL_REGS txbnctrl, uint8_t flag);
 
 
 /* Buffer Configuration */

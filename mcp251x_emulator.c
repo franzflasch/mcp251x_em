@@ -112,6 +112,13 @@
 #define MCP251x_RXBxCTRL_BUKT1     (1 << 1) // Bit 1: Bus Utilization Control bit1
 #define MCP251x_RXBxCTRL_FILHIT0   (1 << 0) // Bit 0: Filter Hit Index bit0
 
+// TXB0CTRL/TXB1CTRL/TXB1CTRL Register Bits (Address: 0x60)
+#define MCP251x_TXBxCTRL_ABTF      (1 << 6)
+#define MCP251x_TXBxCTRL_MLOA      (1 << 5)
+#define MCP251x_TXBxCTRL_TXERR     (1 << 4)
+#define MCP251x_TXBxCTRL_TXREQ     (1 << 3)
+#define MCP251x_TXBxCTRL_TXP1      (1 << 1)
+#define MCP251x_TXBxCTRL_TXP0      (1 << 0)
 
 /* MCP251 SPI Register addresses */
 /* CANSTAT */
@@ -145,6 +152,8 @@
 #define MCP251x_REG_CNF3 0x28
 #define MCP251x_REG_CNF3_L 0x8
 
+#define MCP251x_REG_TXBx_RXBx_CTRL_L 0x0
+
 /* RXB0 */
 #define MCP251x_REG_RXB0CTRL 0x60
 #define MCP251x_REG_RXB0CTRL_H 0x6
@@ -155,6 +164,20 @@
 #define MCP251x_REG_RXB1CTRL_H 0x7
 #define MCP251x_REG_RXB1CTRL_L 0x0
 
+/* TXB0CTRL */
+#define MCP251x_REG_TXB0CTRL 0x30
+#define MCP251x_REG_TXB0CTRL_H 0x3
+#define MCP251x_REG_TXB0CTRL_L 0x0
+
+/* TXB1CTRL */
+#define MCP251x_REG_TXB1CTRL 0x40
+#define MCP251x_REG_TXB1CTRL_H 0x4
+#define MCP251x_REG_TXB1CTRL_L 0x0
+
+/* TXB2CTRL */
+#define MCP251x_REG_TXB2CTRL 0x50
+#define MCP251x_REG_TXB2CTRL_H 0x5
+#define MCP251x_REG_TXB2CTRL_L 0x0
 
 /* MCP251x SPI CMDs */
 #define MCP251x_SPI_CMD_RESET 0xC0
@@ -202,8 +225,6 @@
 #define MCP251x_SPI_CMD_RX_STATUS_BASE 0xB
 #define MCP251x_SPI_CMD_RX_STATUS_CMD 0x0
 
-#define MCP251x_SPI_CMD_TXBx_RXBx_CTRL_BASE 0x0
-
 typedef enum
 {
     MCP251x_OPMODE_NORMAL = 0x00,
@@ -214,6 +235,67 @@ typedef enum
 
 } MCP251x_OPMODE;
 
+static inline void check_txreq(mcp251x_td *mcp251x, uint8_t data, uint8_t *txbnctrl)
+{
+    if(MCP251x_BIT_SET(data, MCP251x_TXBxCTRL_TXREQ))
+    {
+        MCP251x_CLEAR_BIT(*txbnctrl, MCP251x_TXBxCTRL_ABTF);
+        MCP251x_CLEAR_BIT(*txbnctrl, MCP251x_TXBxCTRL_MLOA);
+        MCP251x_CLEAR_BIT(*txbnctrl, MCP251x_TXBxCTRL_TXERR);
+        MCP251x_SET_BIT(*txbnctrl, MCP251x_TXBxCTRL_TXREQ);
+        task_queue_push(&mcp251x->can_tx_irq_queue, mcp251x->can_txb0_cb, NULL);
+    }
+}
+
+static inline uint8_t txb0ctrl_read(mcp251x_td *mcp251x)
+{
+    // printf("%s unimplemented\r\n", __func__);
+    // while(1);
+    return mcp251x->txb0ctrl;
+}
+
+static inline uint8_t txb0ctrl_write(mcp251x_td *mcp251x, uint8_t data, uint8_t mask)
+{
+    uint8_t tmp = data & mask;
+    check_txreq(mcp251x, tmp, &mcp251x->txb0ctrl);
+
+    // printf("%s unimplemented\r\n", __func__);
+    // while(1);
+    return 0;
+}
+
+static inline uint8_t txb1ctrl_read(mcp251x_td *mcp251x)
+{
+    printf("%s unimplemented\r\n", __func__);
+    while(1);
+    return mcp251x->txb1ctrl;
+}
+
+static inline uint8_t txb1ctrl_write(mcp251x_td *mcp251x, uint8_t data, uint8_t mask)
+{
+    mcp251x->txb1ctrl = data & mask;
+
+    printf("%s unimplemented\r\n", __func__);
+    while(1);
+    return 0;
+}
+
+static inline uint8_t txb2ctrl_read(mcp251x_td *mcp251x)
+{
+    printf("%s unimplemented\r\n", __func__);
+    while(1);
+    return mcp251x->txb2ctrl;
+}
+
+static inline uint8_t txb2ctrl_write(mcp251x_td *mcp251x, uint8_t data, uint8_t mask)
+{
+    mcp251x->txb2ctrl = data & mask;
+
+    printf("%s unimplemented\r\n", __func__);
+    while(1);
+    return 0;
+}
+
 static inline uint8_t canstat_read(mcp251x_td *mcp251x)
 {
     /* just return the value for now */
@@ -222,9 +304,8 @@ static inline uint8_t canstat_read(mcp251x_td *mcp251x)
 
 static inline uint8_t canstat_write(mcp251x_td *mcp251x, uint8_t data, uint8_t mask)
 {
-    (void) mask;
     /* just return the value for now */
-    mcp251x->canstat = data;
+    mcp251x->canstat = data & mask;
     return 0;
 }
 
@@ -236,12 +317,12 @@ static inline uint8_t canctrl_read(mcp251x_td *mcp251x)
 
 static inline uint8_t canctrl_write(mcp251x_td *mcp251x, uint8_t data, uint8_t mask)
 {
-    (void) mask;
-
-    int opmode = MCP251x_GET_OPMODE(data);
+    int opmode = 0;
 
     /* just return the value for now */
-    mcp251x->canctrl = data;
+    mcp251x->canctrl = data & mask;
+
+    opmode = MCP251x_GET_OPMODE(mcp251x->canctrl);
 
     /* also set the canstat for now */
     MCP251x_SET_OPMODE(mcp251x->canstat, opmode);
@@ -267,16 +348,29 @@ static inline uint8_t caninte_read(mcp251x_td *mcp251x)
 
 static inline uint8_t caninte_write(mcp251x_td *mcp251x, uint8_t data, uint8_t mask)
 {
-    (void) mask;
+    if (mask & MCP251x_CANINTE_MERRE)
+        mcp251x->merre = MCP251x_BIT_SET(data, MCP251x_CANINTE_MERRE);
 
-    mcp251x->merre = MCP251x_BIT_SET(data, MCP251x_CANINTE_MERRE);
-    mcp251x->wakie = MCP251x_BIT_SET(data, MCP251x_CANINTE_WAKIE);
-    mcp251x->errie = MCP251x_BIT_SET(data, MCP251x_CANINTE_ERRIE);
-    mcp251x->tx2ie = MCP251x_BIT_SET(data, MCP251x_CANINTE_TX2IE);
-    mcp251x->tx1ie = MCP251x_BIT_SET(data, MCP251x_CANINTE_TX1IE);
-    mcp251x->tx0ie = MCP251x_BIT_SET(data, MCP251x_CANINTE_TX0IE);
-    mcp251x->rx1ie = MCP251x_BIT_SET(data, MCP251x_CANINTE_RX1IE);
-    mcp251x->rx0ie = MCP251x_BIT_SET(data, MCP251x_CANINTE_RX0IE);
+    if (mask & MCP251x_CANINTE_WAKIE)
+        mcp251x->wakie = MCP251x_BIT_SET(data, MCP251x_CANINTE_WAKIE);
+
+    if (mask & MCP251x_CANINTE_ERRIE)
+        mcp251x->errie = MCP251x_BIT_SET(data, MCP251x_CANINTE_ERRIE);
+
+    if (mask & MCP251x_CANINTE_TX2IE)
+        mcp251x->tx2ie = MCP251x_BIT_SET(data, MCP251x_CANINTE_TX2IE);
+
+    if (mask & MCP251x_CANINTE_TX1IE)
+        mcp251x->tx1ie = MCP251x_BIT_SET(data, MCP251x_CANINTE_TX1IE);
+
+    if (mask & MCP251x_CANINTE_TX0IE)
+        mcp251x->tx0ie = MCP251x_BIT_SET(data, MCP251x_CANINTE_TX0IE);
+
+    if (mask & MCP251x_CANINTE_RX1IE)
+        mcp251x->rx1ie = MCP251x_BIT_SET(data, MCP251x_CANINTE_RX1IE);
+
+    if (mask & MCP251x_CANINTE_RX0IE)
+        mcp251x->rx0ie = MCP251x_BIT_SET(data, MCP251x_CANINTE_RX0IE);
 
     return 0;
 }
@@ -300,16 +394,29 @@ static inline uint8_t canintf_read(mcp251x_td *mcp251x)
 
 static inline uint8_t canintf_write(mcp251x_td *mcp251x, uint8_t data, uint8_t mask)
 {
-    (void) mask;
+    if (mask & MCP251x_CANINTF_MERRF)
+        mcp251x->merrf = MCP251x_BIT_SET(data, MCP251x_CANINTF_MERRF);
 
-    mcp251x->merrf = MCP251x_BIT_SET(data, MCP251x_CANINTF_MERRF);
-    mcp251x->wakif = MCP251x_BIT_SET(data, MCP251x_CANINTF_WAKIF);
-    mcp251x->errif = MCP251x_BIT_SET(data, MCP251x_CANINTF_ERRIF);
-    mcp251x->tx2if = MCP251x_BIT_SET(data, MCP251x_CANINTF_TX2IF);
-    mcp251x->tx1if = MCP251x_BIT_SET(data, MCP251x_CANINTF_TX1IF);
-    mcp251x->tx0if = MCP251x_BIT_SET(data, MCP251x_CANINTF_TX0IF);
-    mcp251x->rx1if = MCP251x_BIT_SET(data, MCP251x_CANINTF_RX1IF);
-    mcp251x->rx0if = MCP251x_BIT_SET(data, MCP251x_CANINTF_RX0IF);
+    if (mask & MCP251x_CANINTF_WAKIF)
+        mcp251x->wakif = MCP251x_BIT_SET(data, MCP251x_CANINTF_WAKIF);
+
+    if (mask & MCP251x_CANINTF_ERRIF)
+        mcp251x->errif = MCP251x_BIT_SET(data, MCP251x_CANINTF_ERRIF);
+
+    if (mask & MCP251x_CANINTF_TX2IF)
+        mcp251x->tx2if = MCP251x_BIT_SET(data, MCP251x_CANINTF_TX2IF);
+
+    if (mask & MCP251x_CANINTF_TX1IF)
+        mcp251x->tx1if = MCP251x_BIT_SET(data, MCP251x_CANINTF_TX1IF);
+
+    if (mask & MCP251x_CANINTF_TX0IF)
+        mcp251x->tx0if = MCP251x_BIT_SET(data, MCP251x_CANINTF_TX0IF);
+
+    if (mask & MCP251x_CANINTF_RX1IF)
+        mcp251x->rx1if = MCP251x_BIT_SET(data, MCP251x_CANINTF_RX1IF);
+
+    if (mask & MCP251x_CANINTF_RX0IF)
+        mcp251x->rx0if = MCP251x_BIT_SET(data, MCP251x_CANINTF_RX0IF);
 
     return 0;
 }
@@ -318,6 +425,15 @@ static inline void handle_spi_write(mcp251x_td *mcp251x, uint8_t spi_data)
 {
     switch(mcp251x->ctrl_reg)
     {
+        case TXB0CTRL:
+            txb0ctrl_write(mcp251x, spi_data, mcp251x->modify_mask);
+            break;
+        case TXB1CTRL:
+            txb1ctrl_write(mcp251x, spi_data, mcp251x->modify_mask);
+            break;
+        case TXB2CTRL:
+            txb2ctrl_write(mcp251x, spi_data, mcp251x->modify_mask);
+            break;
         case CANSTAT:
             canstat_write(mcp251x, spi_data, mcp251x->modify_mask);
             break;
@@ -434,12 +550,27 @@ static inline uint8_t handle_spi_addr(mcp251x_td *mcp251x, uint8_t spi_data)
             break;
         /* CANINTF */
         /* EFLG */
-        case MCP251x_SPI_CMD_TXBx_RXBx_CTRL_BASE:
-            /* TXB0 */
-            /* TXB1 */
-            /* TXB2 */
-            /* RXB0 */
-            /* RXB1 */
+        case MCP251x_REG_TXBx_RXBx_CTRL_L:
+            switch(higher_order_addr)
+            {
+                /* TXB0 */
+                case MCP251x_REG_TXB0CTRL_H:
+                    outdata = txb0ctrl_read(mcp251x);
+                    mcp251x->ctrl_reg = TXB0CTRL;
+                    break;
+                /* TXB1 */
+                case MCP251x_REG_TXB1CTRL_H:
+                    outdata = txb1ctrl_read(mcp251x);
+                    mcp251x->ctrl_reg = TXB1CTRL;
+                    break;
+                /* TXB2 */
+                case MCP251x_REG_TXB2CTRL_H:
+                    outdata = txb2ctrl_read(mcp251x);
+                    mcp251x->ctrl_reg = TXB2CTRL;
+                    break;
+                /* RXB0 */
+                /* RXB1 */
+            }
             break;
         default:
             printf("unknown address! %x\r\n", spi_data);
@@ -623,20 +754,41 @@ void mcp251x_emu_handle_txb_done(mcp251x_td *mcp251x, MCP251x_IRQ_FLAGS txb)
 {
     mcp251x_emu_set_irq_flag(mcp251x, txb);
 
-    if(txb == INTERRUPT_TX0IF)
+    if( (txb == INTERRUPT_TX0IF) && (mcp251x->tx0if) )
     {
-        if(mcp251x->tx0if)
-            mcp251x->set_irq_cb(0);
+        /* clear TXREQ */
+        MCP251x_CLEAR_BIT(mcp251x->txb0ctrl, MCP251x_TXBxCTRL_TXREQ);
+        mcp251x->set_irq_cb(0);
     }
-    else if(txb == INTERRUPT_TX1IF)
+    else if( (txb == INTERRUPT_TX1IF) && (mcp251x->tx1if) )
     {
-        if(mcp251x->tx1if)
-            mcp251x->set_irq_cb(0);
+        /* clear TXREQ */
+        MCP251x_CLEAR_BIT(mcp251x->txb1ctrl, MCP251x_TXBxCTRL_TXREQ);
+        mcp251x->set_irq_cb(0);
     }
-    else if(txb == INTERRUPT_TX2IF)
+    else if( (txb == INTERRUPT_TX2IF) && (mcp251x->tx2if) )
     {
-        if(mcp251x->tx2if)
-            mcp251x->set_irq_cb(0);
+        /* clear TXREQ */
+        MCP251x_CLEAR_BIT(mcp251x->txb2ctrl, MCP251x_TXBxCTRL_TXREQ);
+        mcp251x->set_irq_cb(0);
+    }
+}
+
+void mcp251x_emu_set_transmit_err_flag(mcp251x_td *mcp251x, MCP251x_CTRL_REGS txbnctrl, uint8_t flag)
+{
+    switch(txbnctrl)
+    {
+        case TXB0CTRL:
+            mcp251x->txb0ctrl |= flag;
+            break;
+        case TXB1CTRL:
+            mcp251x->txb1ctrl |= flag;
+            break;
+        case TXB2CTRL:
+            mcp251x->txb2ctrl |= flag;
+            break;
+        default:
+            break;
     }
 }
 
