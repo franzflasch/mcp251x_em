@@ -18,21 +18,46 @@
 static trace_buffer_t rx_trace_buffer = {0};
 static mcp251x_td *mcp251x_ref = NULL;
 
-void can_tx_cb(void *priv)
+void can_txb0_cb(void *priv)
 {
     (void) priv;
     int i = 0;
-    printf("CAN TX done!\r\n");
+    printf("txb0 callback!\r\n");
 
     for(i=0;i<MCP251x_TXB_RXB_REG_SIZE;i++)
     {
         printf("%x\r\n", mcp251x_ref->txb0[i]);
     }
 
-    /* Fake txf interrupt here */
-    /* trigger interrupt */
-    mcp251x_ref->tx0if = 1;
-    mcp251x_ref->set_irq_cb(0);
+    mcp251x_emu_handle_txb_done(mcp251x_ref, INTERRUPT_TX0IF);
+}
+
+void can_txb1_cb(void *priv)
+{
+    (void) priv;
+    int i = 0;
+    printf("txb1 callback!\r\n");
+
+    for(i=0;i<MCP251x_TXB_RXB_REG_SIZE;i++)
+    {
+        printf("%x\r\n", mcp251x_ref->txb1[i]);
+    }
+
+    mcp251x_emu_handle_txb_done(mcp251x_ref, INTERRUPT_TX1IF);
+}
+
+void can_txb2_cb(void *priv)
+{
+    (void) priv;
+    int i = 0;
+    printf("txb2 callback!\r\n");
+
+    for(i=0;i<MCP251x_TXB_RXB_REG_SIZE;i++)
+    {
+        printf("%x\r\n", mcp251x_ref->txb2[i]);
+    }
+
+    mcp251x_emu_handle_txb_done(mcp251x_ref, INTERRUPT_TX2IF);
 }
 
 void mcp251x_emu_set_irq_cb(int high)
@@ -137,7 +162,7 @@ void mcp251x_stm32_init(mcp251x_td *mcp251x)
 
     mcp251x_ref = mcp251x;
 
-    mcp251x_spi_emu_init(mcp251x, can_tx_cb, mcp251x_emu_set_irq_cb);
+    mcp251x_spi_emu_init(mcp251x, can_txb0_cb, can_txb1_cb, can_txb2_cb, mcp251x_emu_set_irq_cb);
 }
 
 trace_buffer_t *mcp251x_emu_stm32_trace_buf_init(void)

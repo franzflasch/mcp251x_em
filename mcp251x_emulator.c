@@ -252,14 +252,14 @@ static inline uint8_t caninte_read(mcp251x_td *mcp251x)
 {
     uint8_t outdata = 0;
 
-    if(mcp251x->merrf) MCP251x_SET_BIT(outdata, MCP251x_CANINTE_MERRE);
-    if(mcp251x->wakif) MCP251x_SET_BIT(outdata, MCP251x_CANINTE_WAKIE);
-    if(mcp251x->errif) MCP251x_SET_BIT(outdata, MCP251x_CANINTE_ERRIE);
-    if(mcp251x->tx2if) MCP251x_SET_BIT(outdata, MCP251x_CANINTE_TX2IE);
-    if(mcp251x->tx1if) MCP251x_SET_BIT(outdata, MCP251x_CANINTE_TX1IE);
-    if(mcp251x->tx0if) MCP251x_SET_BIT(outdata, MCP251x_CANINTE_TX0IE);
-    if(mcp251x->rx1if) MCP251x_SET_BIT(outdata, MCP251x_CANINTE_RX1IE);
-    if(mcp251x->rx0if) MCP251x_SET_BIT(outdata, MCP251x_CANINTE_RX0IE);
+    if(mcp251x->merre) MCP251x_SET_BIT(outdata, MCP251x_CANINTE_MERRE);
+    if(mcp251x->wakie) MCP251x_SET_BIT(outdata, MCP251x_CANINTE_WAKIE);
+    if(mcp251x->errie) MCP251x_SET_BIT(outdata, MCP251x_CANINTE_ERRIE);
+    if(mcp251x->tx2ie) MCP251x_SET_BIT(outdata, MCP251x_CANINTE_TX2IE);
+    if(mcp251x->tx1ie) MCP251x_SET_BIT(outdata, MCP251x_CANINTE_TX1IE);
+    if(mcp251x->tx0ie) MCP251x_SET_BIT(outdata, MCP251x_CANINTE_TX0IE);
+    if(mcp251x->rx1ie) MCP251x_SET_BIT(outdata, MCP251x_CANINTE_RX1IE);
+    if(mcp251x->rx0ie) MCP251x_SET_BIT(outdata, MCP251x_CANINTE_RX0IE);
 
     /* just return the value for now */
     return outdata;
@@ -472,6 +472,7 @@ static inline uint8_t handle_spi_cmd(mcp251x_td *mcp251x, uint8_t spi_data)
     uint8_t base_cmd = (spi_data >> 4);
     uint8_t sub_cmd = (spi_data & 0xF);
     uint8_t spi_out = 0;
+    int txb = 0;
 
     switch(base_cmd)
     {
@@ -528,7 +529,13 @@ static inline uint8_t handle_spi_cmd(mcp251x_td *mcp251x, uint8_t spi_data)
             mcp251x->spi_state = mcp251x_SPI_STATE_SPI_READ_STATUS;
             break;
         case MCP251x_SPI_CMD_RTS_BASE:
-            task_queue_push(&mcp251x->can_tx_irq_queue, mcp251x->can_tx_irq_queue_cb, NULL);
+            txb = (sub_cmd & ~(MCP251x_SPI_CMD_RTS_MASK));
+            if(txb & MCP251x_SPI_CMD_RTS_TXB0_CMD)
+                task_queue_push(&mcp251x->can_tx_irq_queue, mcp251x->can_txb0_cb, NULL);
+            if(txb & MCP251x_SPI_CMD_RTS_TXB1_CMD)
+                task_queue_push(&mcp251x->can_tx_irq_queue, mcp251x->can_txb1_cb, NULL);
+            if(txb & MCP251x_SPI_CMD_RTS_TXB2_CMD)
+                task_queue_push(&mcp251x->can_tx_irq_queue, mcp251x->can_txb2_cb, NULL);
             break;
     }
 
@@ -572,11 +579,17 @@ void mcp251x_reset_state(mcp251x_td *mcp251x)
     mcp251x->spi_state = mcp251x_SPI_STATE_SPI_CMD;
 }
 
-void mcp251x_spi_emu_init(mcp251x_td *mcp251x, void (*can_tx_irq_cb)(void *priv), void (*set_irq_cb)(int high))
+void mcp251x_spi_emu_init(mcp251x_td *mcp251x, 
+                          void (*can_txb0_cb)(void *priv), 
+                          void (*can_txb1_cb)(void *priv),
+                          void (*can_txb2_cb)(void *priv),
+                          void (*set_irq_cb)(int high))
 {
     memset(mcp251x, 0, sizeof(mcp251x_td));
 
-    mcp251x->can_tx_irq_queue_cb = can_tx_irq_cb;
+    mcp251x->can_txb0_cb = can_txb0_cb;
+    mcp251x->can_txb1_cb = can_txb1_cb;
+    mcp251x->can_txb2_cb = can_txb2_cb;
     task_queue_init(&mcp251x->can_tx_irq_queue, 5);
 
     mcp251x->set_irq_cb = set_irq_cb;
@@ -589,6 +602,43 @@ void mcp251x_emu_can_tx_irq_process(mcp251x_td *mcp251x)
     task_queue_pull(&mcp251x->can_tx_irq_queue);
 }
 
+void mcp251x_emu_set_irq_flag(mcp251x_td *mcp251x, MCP251x_IRQ_FLAGS irq_flag)
+{    
+    switch (irq_flag) 
+    {
+        case INTERRUPT_MERRF: mcp251x->merrf = 1; break;
+        case INTERRUPT_WAKIF: mcp251x->wakif = 1; break;
+        case INTERRUPT_ERRIF: mcp251x->errif = 1; break;
+        case INTERRUPT_TX2IF: mcp251x->tx2if = 1; break;
+        case INTERRUPT_TX1IF: mcp251x->tx1if = 1; break;
+        case INTERRUPT_TX0IF: mcp251x->tx0if = 1; break;
+        case INTERRUPT_RX1IF: mcp251x->rx1if = 1; break;
+        case INTERRUPT_RX0IF: mcp251x->rx0if = 1; break;
+        default:
+            break;
+    }
+}
+
+void mcp251x_emu_handle_txb_done(mcp251x_td *mcp251x, MCP251x_IRQ_FLAGS txb)
+{
+    mcp251x_emu_set_irq_flag(mcp251x, txb);
+
+    if(txb == INTERRUPT_TX0IF)
+    {
+        if(mcp251x->tx0if)
+            mcp251x->set_irq_cb(0);
+    }
+    else if(txb == INTERRUPT_TX1IF)
+    {
+        if(mcp251x->tx1if)
+            mcp251x->set_irq_cb(0);
+    }
+    else if(txb == INTERRUPT_TX2IF)
+    {
+        if(mcp251x->tx2if)
+            mcp251x->set_irq_cb(0);
+    }
+}
 
 
 /************ DEBUG BUFFER TRACE *****************/

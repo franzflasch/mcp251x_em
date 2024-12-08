@@ -4,7 +4,7 @@
 #include <stdint.h>
 #include <task_queue.h>
 
-#define ENABLE_RX_TRACE_BUF
+// #define ENABLE_RX_TRACE_BUF
 
 #define MCP251x_TXB_RXB_REG_SIZE 13
 
@@ -51,11 +51,27 @@ typedef enum
 
 } MCP251x_CTRL_REGS;
 
+typedef enum 
+{
+    INTERRUPT_MERRF,
+    INTERRUPT_WAKIF,
+    INTERRUPT_ERRIF,
+    INTERRUPT_TX2IF,
+    INTERRUPT_TX1IF,
+    INTERRUPT_TX0IF,
+    INTERRUPT_RX1IF,
+    INTERRUPT_RX0IF
+
+} MCP251x_IRQ_FLAGS;
+
 typedef struct mcp251x_struct mcp251x_td;
 typedef struct mcp251x_struct
 {
     task_queue_td can_tx_irq_queue;
-    void (*can_tx_irq_queue_cb)(void *priv);
+    void (*can_txb0_cb)(void *priv);
+    void (*can_txb1_cb)(void *priv);
+    void (*can_txb2_cb)(void *priv);
+
     void (*set_irq_cb)(int high);
 
     MCP251x_SPI_STATE spi_state;
@@ -115,8 +131,14 @@ typedef struct mcp251x_struct
 void mcp251x_emu_rx_buf_process(void);
 uint8_t mcp251x_spi_isr_handler(mcp251x_td *mcp251x, uint8_t spi_data);
 void mcp251x_reset_state(mcp251x_td *mcp251x);
-void mcp251x_spi_emu_init(mcp251x_td *mcp251x, void (*can_tx_irq_cb)(void *priv), void (*set_irq_cb)(int high));
+void mcp251x_spi_emu_init(mcp251x_td *mcp251x, 
+                          void (*can_txb0_cb)(void *priv), 
+                          void (*can_txb1_cb)(void *priv),
+                          void (*can_txb2_cb)(void *priv),
+                          void (*set_irq_cb)(int high));
 void mcp251x_emu_can_tx_irq_process(mcp251x_td *mcp251x);
+void mcp251x_emu_set_irq_flag(mcp251x_td *mcp251x, MCP251x_IRQ_FLAGS irq_flag);
+void mcp251x_emu_handle_txb_done(mcp251x_td *mcp251x, MCP251x_IRQ_FLAGS txb);
 
 
 /* Buffer Configuration */
