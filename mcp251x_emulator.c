@@ -104,13 +104,21 @@
 #define MCP251x_CNF3_PHSEG21   (1 << 1) // Bit 1: PHSEG2 bit 1
 #define MCP251x_CNF3_PHSEG20   (1 << 0) // Bit 0: PHSEG2 bit 0
 
-// RXB0CTRL/RXB1CTRL Register Bits (Address: 0x60)
-#define MCP251x_RXBxCTRL_RXM1      (1 << 6) // Bit 6: Receive Buffer Mode bit 1
-#define MCP251x_RXBxCTRL_RXM0      (1 << 5) // Bit 5: Receive Buffer Mode bit 0
-#define MCP251x_RXBxCTRL_RXRTR     (1 << 3) // Bit 3: Receive Remote Transmission Request
-#define MCP251x_RXBxCTRL_BUKT      (1 << 2) // Bit 2: Bus Utilization Control (Overflow Flag)
-#define MCP251x_RXBxCTRL_BUKT1     (1 << 1) // Bit 1: Bus Utilization Control bit1
-#define MCP251x_RXBxCTRL_FILHIT0   (1 << 0) // Bit 0: Filter Hit Index bit0
+// RXB0CTRL Register Bits (Address: 0x60)
+#define MCP251x_RXB0CTRL_RXM1      (1 << 6) // Bit 6: Receive Buffer Mode bit 1
+#define MCP251x_RXB0CTRL_RXM0      (1 << 5) // Bit 5: Receive Buffer Mode bit 0
+#define MCP251x_RXB0CTRL_RXRTR     (1 << 3) // Bit 3: Receive Remote Transmission Request
+#define MCP251x_RXB0CTRL_BUKT      (1 << 2) // Bit 2: Bus Utilization Control (Overflow Flag)
+#define MCP251x_RXB0CTRL_BUKT1     (1 << 1) // Bit 1: Bus Utilization Control bit1
+#define MCP251x_RXB0CTRL_FILHIT0   (1 << 0) // Bit 0: Filter Hit Index bit0
+
+// RXB1CTRL Register Bits (Address: 0x60)
+#define MCP251x_RXB1CTRL_RXM1      (1 << 6) // Bit 6: Receive Buffer Mode bit 1
+#define MCP251x_RXB1CTRL_RXM0      (1 << 5) // Bit 5: Receive Buffer Mode bit 0
+#define MCP251x_RXB1CTRL_RXRTR     (1 << 3) // Bit 3: Receive Remote Transmission Request
+#define MCP251x_RXB1CTRL_FILHIT2   (1 << 2) // Bit 2: Bus Utilization Control (Overflow Flag)
+#define MCP251x_RXB1CTRL_FILHIT1   (1 << 1) // Bit 1: Bus Utilization Control bit1
+#define MCP251x_RXB1CTRL_FILHIT0   (1 << 0) // Bit 0: Filter Hit Index bit0
 
 // TXB0CTRL/TXB1CTRL/TXB1CTRL Register Bits (Address: 0x60)
 #define MCP251x_TXBxCTRL_ABTF      (1 << 6)
@@ -827,8 +835,6 @@ void rx_buf_trace_queue_cb(void *priv)
     trace_buffer_t *rx_trace_buffer = priv;
 
     int msg_len = rx_trace_buffer->trace_buf[rx_trace_buffer->buf_read_location].msg_len;
-    int curr_reg = 0;
-    int curr_reg_val = 0;
 
     /* Validate msg_len to prevent buffer overread */
     if (msg_len > RX_TRACE_BUF_SIZE)
@@ -837,191 +843,12 @@ void rx_buf_trace_queue_cb(void *priv)
         msg_len = RX_TRACE_BUF_SIZE; /* Adjust as needed */
     }
 
-    printf("WR: %u RD: %u ", rx_trace_buffer->buf_write_location, rx_trace_buffer->buf_read_location);
+    // printf("WR: %u RD: %u ", rx_trace_buffer->buf_write_location, rx_trace_buffer->buf_read_location);
     for(int i = 0; i < msg_len; i++)
     {
         printf("%02x ", rx_trace_buffer->trace_buf[rx_trace_buffer->buf_read_location].buf[i]);
         /* mark this buffer as read by setting the msg_len to 0 */
         rx_trace_buffer->trace_buf[rx_trace_buffer->buf_read_location].msg_len = 0;
-    }
-
-    for(int i = 0; i < msg_len; i++)
-    {
-        /* CMD */
-        if(i==0)
-        {
-            switch(rx_trace_buffer->trace_buf[rx_trace_buffer->buf_read_location].buf[0])
-            {
-                case MCP251x_SPI_CMD_RESET:
-                    printf("RST ");
-                break;
-                case MCP251x_SPI_CMD_READ:
-                    printf("RD ");
-                break;
-                case MCP251x_SPI_CMD_WRITE:
-                    printf("WR ");
-                break;
-                case MCP251x_SPI_CMD_BIT_MODIFY:
-                    printf("BIT MODIFY ");
-                break;
-                default:
-                break;
-            }
-
-            if( (rx_trace_buffer->trace_buf[rx_trace_buffer->buf_read_location].buf[0] & MCP251x_SPI_CMD_LOAD_TX_BUFFER_MASK) == MCP251x_SPI_CMD_LOAD_TX_BUFFER)
-                printf("LOAD_TX ");
-        }
-        /* ADDRESS */
-        else if(i==1)
-        {
-            curr_reg = rx_trace_buffer->trace_buf[rx_trace_buffer->buf_read_location].buf[1];
-            switch(curr_reg)
-            {
-                case MCP251x_REG_CANCTRL:
-                    printf("CANCTRL ");
-                break;
-                case MCP251x_REG_CANSTAT:
-                    printf("CANSTAT ");
-                break;
-                case MCP251x_REG_CANINTE:
-                    printf("CANINTE ");
-                break;
-                case MCP251x_REG_CNF1:
-                    printf("CNF1 ");
-                break;
-                case MCP251x_REG_CNF2:
-                    printf("CNF2 ");
-                break;
-                case MCP251x_REG_CNF3:
-                    printf("CNF3 ");
-                break;
-                case MCP251x_REG_RXB1CTRL:
-                    printf("RXB1CTRL ");
-                break;
-                case MCP251x_REG_RXB0CTRL:
-                    printf("RXB0CTRL ");
-                break;
-                default:
-                break;
-            }
-        }
-        else if(i==2)
-        {
-            curr_reg_val = rx_trace_buffer->trace_buf[rx_trace_buffer->buf_read_location].buf[2];
-            switch(curr_reg)
-            {
-                case MCP251x_REG_RXB1CTRL:
-                case MCP251x_REG_RXB0CTRL:
-                {
-                    printf("%s:%s:%s:%s:%s:%s:%s",
-                            DECODE_BIT(curr_reg_val, MCP251x_RXBxCTRL_RXM1, "RXM1"),
-                            DECODE_BIT(curr_reg_val, MCP251x_RXBxCTRL_RXM0, "RXM0"),
-                            DECODE_BIT(curr_reg_val, 0x10, "-"),
-                            DECODE_BIT(curr_reg_val, MCP251x_RXBxCTRL_RXRTR, "RXRTR"),
-                            DECODE_BIT(curr_reg_val, MCP251x_RXBxCTRL_BUKT, "BUKT"),
-                            DECODE_BIT(curr_reg_val, MCP251x_RXBxCTRL_BUKT1, "BUKT1"),
-                            DECODE_BIT(curr_reg_val, MCP251x_RXBxCTRL_FILHIT0, "FILHIT0")
-                            );
-                    break;
-                }
-                case MCP251x_REG_CNF1:
-                {
-                    printf("%s:%s:%s:%s:%s:%s:%s:%s",
-                            DECODE_BIT(curr_reg_val, MCP251x_CNF1_SJW1, "SJW1"),
-                            DECODE_BIT(curr_reg_val, MCP251x_CNF1_SJW0, "SJW0"),
-                            DECODE_BIT(curr_reg_val, MCP251x_CNF1_BRP5, "BRP5"),
-                            DECODE_BIT(curr_reg_val, MCP251x_CNF1_BRP4, "BRP4"),
-                            DECODE_BIT(curr_reg_val, MCP251x_CNF1_BRP3, "BRP3"),
-                            DECODE_BIT(curr_reg_val, MCP251x_CNF1_BRP2, "BRP2"),
-                            DECODE_BIT(curr_reg_val, MCP251x_CNF1_BRP1, "BRP1"),
-                            DECODE_BIT(curr_reg_val, MCP251x_CNF1_BRP0, "BRP0")
-                            );
-                    break;
-                }
-                case MCP251x_REG_CNF2:
-                {
-                    printf("%s:%s:%s:%s:%s:%s:%s:%s",
-                            DECODE_BIT(curr_reg_val, MCP251x_CNF2_BTLMODE, "BTLMODE"),
-                            DECODE_BIT(curr_reg_val, MCP251x_CNF2_SAM, "SAM"),
-                            DECODE_BIT(curr_reg_val, MCP251x_CNF2_PHSEG12, "PHSEG12"),
-                            DECODE_BIT(curr_reg_val, MCP251x_CNF2_PHSEG11, "PHSEG11"),
-                            DECODE_BIT(curr_reg_val, MCP251x_CNF2_PHSEG10, "PHSEG10"),
-                            DECODE_BIT(curr_reg_val, MCP251x_CNF2_PRSEG2, "PRSEG2"),
-                            DECODE_BIT(curr_reg_val, MCP251x_CNF2_PRSEG1, "PRSEG1"),
-                            DECODE_BIT(curr_reg_val, MCP251x_CNF2_PRSEG0, "PRSEG0")
-                            );
-                    break;
-                }
-                case MCP251x_REG_CNF3:
-                {
-                    printf("%s:%s:%s:%s:%s:%s:%s:%s",
-                            DECODE_BIT(curr_reg_val, MCP251x_CNF3_SOF, "SOF"),
-                            DECODE_BIT(curr_reg_val, MCP251x_CNF3_WAKFIL, "WAKFIL"),
-                            DECODE_BIT(curr_reg_val, 0x20, "-"),
-                            DECODE_BIT(curr_reg_val, 0x10, "-"),
-                            DECODE_BIT(curr_reg_val, 0x08, "-"),
-                            DECODE_BIT(curr_reg_val, MCP251x_CNF3_PHSEG22, "PRSEG22"),
-                            DECODE_BIT(curr_reg_val, MCP251x_CNF3_PHSEG21, "PRSEG21"),
-                            DECODE_BIT(curr_reg_val, MCP251x_CNF3_PHSEG20, "PRSEG20")
-                            );
-                    break;
-                }
-                case MCP251x_REG_CANCTRL:
-                {
-                    int opmode = curr_reg_val >> MCP251x_OPMODE_SHIFT;
-                    printf("%s:%s:%s:%s:%s:%s:%s:%s",
-                            opmode == MCP251x_OPMODE_NORMAL ? "NORMAL" :
-                            opmode == MCP251x_OPMODE_SLEEP ? "SLEEP" :
-                            opmode == MCP251x_OPMODE_LOOPBACK ? "LOOPBACK" :
-                            opmode == MCP251x_OPMODE_LISTEN_ONLY ? "LISTEN" : "CONFIG",
-                            DECODE_BIT(curr_reg_val, MCP251x_CANCTRL_ABAT, "ABAT"),
-                            DECODE_BIT(curr_reg_val, MCP251x_CANCTRL_OSM, "OSM"),
-                            DECODE_BIT(curr_reg_val, MCP251x_CANCTRL_CLKEN, "CLKEN"),
-                            DECODE_BIT(curr_reg_val, MCP251x_CANCTRL_CLKPRE_DIV8, "CLKPRE_DIV8"),
-                            DECODE_BIT(curr_reg_val, MCP251x_CANCTRL_CLKPRE_DIV4, "CLKPRE_DIV4"),
-                            DECODE_BIT(curr_reg_val, MCP251x_CANCTRL_CLKPRE_DIV2, "CLKPRE_DIV2"),
-                            DECODE_BIT(curr_reg_val, MCP251x_CANCTRL_CLKPRE_DIV1, "CLKPRE_DIV1")
-                            );
-                    break;
-                }
-                case MCP251x_REG_CANSTAT:
-                {
-                    int opmode = curr_reg_val >> MCP251x_OPMODE_SHIFT;
-                    int icod = ((curr_reg_val >> MCP251x_CANSTAT_ICOD_SHIFT) & MCP251x_CANSTAT_ICOD_MASK);
-                    printf("%s %s",
-                            opmode == MCP251x_OPMODE_NORMAL ? "NORMAL" :
-                            opmode == MCP251x_OPMODE_SLEEP ? "SLEEP" :
-                            opmode == MCP251x_OPMODE_LOOPBACK ? "LOOPBACK" :
-                            opmode == MCP251x_OPMODE_LISTEN_ONLY ? "LISTEN" : "CONFIG",
-                            icod == MCP251x_CANSTAT_ICOD_NOINTERRUPT ? "NOINT" :
-                            icod == MCP251x_CANSTAT_ICOD_ERROR ? "ERROR" :
-                            icod == MCP251x_CANSTAT_ICOD_WAKEUP ? "WAKEUP" :
-                            icod == MCP251x_CANSTAT_ICOD_TXB0 ? "TXB0" :
-                            icod == MCP251x_CANSTAT_ICOD_TXB1 ? "TXB1" :
-                            icod == MCP251x_CANSTAT_ICOD_TXB2 ? "TXB2" :
-                            icod == MCP251x_CANSTAT_ICOD_RXB0 ? "RXB0" : "RXB1"
-                            );
-                    break;
-                }
-                case MCP251x_REG_CANINTE:
-                {
-                    int caninte = curr_reg_val;
-                    printf("%s %s %s %s %s %s %s %s",
-                            caninte & MCP251x_CANINTE_MERRE ? "MERRE" : "x",
-                            caninte & MCP251x_CANINTE_WAKIE ? "WAKIE" : "x",
-                            caninte & MCP251x_CANINTE_ERRIE ? "ERRIE" : "x",
-                            caninte & MCP251x_CANINTE_TX2IE ? "TX2IE" : "x",
-                            caninte & MCP251x_CANINTE_TX1IE ? "TX1IE" : "x",
-                            caninte & MCP251x_CANINTE_TX0IE ? "TX0IE" : "x",
-                            caninte & MCP251x_CANINTE_RX1IE ? "RX1IE" : "x",
-                            caninte & MCP251x_CANINTE_RX0IE ? "RX0IE" : "x"
-                            );
-                    break;
-                }
-                default:
-                break;
-            }
-        }
     }
 
     printf("\r\n");
