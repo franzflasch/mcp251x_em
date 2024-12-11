@@ -17,6 +17,7 @@ typedef enum
     mcp251x_SPI_STATE_SPI_READ_DUMMY,
     mcp251x_SPI_STATE_SPI_LOAD_TX,
     mcp251x_SPI_STATE_SPI_READ_STATUS,
+    mcp251x_SPI_STATE_SPI_READ_RX_BUFFER,
 
 } MCP251x_SPI_STATE;
 
@@ -88,8 +89,8 @@ typedef struct mcp251x_struct
     uint8_t reg_addr_h;
     uint8_t reg_addr_l;
     uint8_t modify_mask;
-    uint8_t load_tx_addr_h;
-    uint8_t load_tx_addr_l;
+    uint8_t load_addr_h;
+    uint8_t load_addr_l;
     MCP251x_CTRL_REGS ctrl_reg;
 
     uint8_t txb0[MCP251x_TXB_RXB_REG_SIZE];
@@ -149,6 +150,7 @@ void mcp251x_emu_can_tx_irq_process(mcp251x_td *mcp251x);
 void mcp251x_emu_set_irq_flag(mcp251x_td *mcp251x, MCP251x_IRQ_FLAGS irq_flag);
 void mcp251x_emu_handle_txb_done(mcp251x_td *mcp251x, MCP251x_IRQ_FLAGS txb);
 void mcp251x_emu_set_transmit_err_flag(mcp251x_td *mcp251x, MCP251x_CTRL_REGS txbnctrl, MCP251x_TXB_ERROR_FLAGS flag);
+void mcp251x_emu_rx_data(mcp251x_td *mcp251x);
 
 
 /* Buffer Configuration */

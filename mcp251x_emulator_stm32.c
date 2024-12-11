@@ -12,6 +12,7 @@
 #include <libopencm3/stm32/spi.h>
 
 #include <usart_dma.h>
+#include <usart3_printf.h>
 
 #include <mcp251x_emulator_stm32.h>
 

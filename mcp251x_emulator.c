@@ -4,6 +4,8 @@
 
 #include <mcp251x_emulator.h>
 
+#include <usart3_printf.h>
+
 #define MCP251x_BIT_SET(x, mask) (((x) & (mask)) != 0)
 #define MCP251x_SET_BIT(reg, bitmask)   ((reg) |= (bitmask))
 #define MCP251x_CLEAR_BIT(reg, bitmask) ((reg) &= ~(bitmask))
@@ -463,7 +465,7 @@ static inline void handle_load_tx(mcp251x_td *mcp251x, uint8_t spi_data)
 {
     uint8_t *tx_buf = NULL;
 
-    switch(mcp251x->load_tx_addr_h)
+    switch(mcp251x->load_addr_h)
     {
         case 3:
             tx_buf = mcp251x->txb0;
@@ -479,14 +481,47 @@ static inline void handle_load_tx(mcp251x_td *mcp251x, uint8_t spi_data)
     if(!tx_buf)
         return;
 
-    tx_buf[mcp251x->load_tx_addr_l] = spi_data;
-    mcp251x->load_tx_addr_l++;
+    tx_buf[mcp251x->load_addr_l] = spi_data;
+    mcp251x->load_addr_l++;
 
-    if(mcp251x->load_tx_addr_l > MCP251x_TXB_RXB_REG_SIZE)
+    if(mcp251x->load_addr_l > MCP251x_TXB_RXB_REG_SIZE)
     {
-        mcp251x->load_tx_addr_l = 0;
+        mcp251x->load_addr_l = 0;
         mcp251x_reset_state(mcp251x);
     }
+}
+
+static inline uint8_t handle_read_rx_buffer(mcp251x_td *mcp251x)
+{
+    uint8_t *rx_buf = NULL;
+    uint8_t ret_val = 0;
+
+    switch(mcp251x->load_addr_h)
+    {
+        case 6:
+            rx_buf = mcp251x->rxb0;
+            break;
+        case 7:
+            rx_buf = mcp251x->rxb1;
+            break;
+    }
+
+    if(!rx_buf)
+        return 0;
+
+    ret_val = rx_buf[mcp251x->load_addr_l];
+    mcp251x->load_addr_l++;
+
+    if(mcp251x->load_addr_l >= MCP251x_TXB_RXB_REG_SIZE)
+    {
+        mcp251x->load_addr_l = 0;
+
+        /* clear rx0if */
+        mcp251x->rx0if = 0;
+        mcp251x_reset_state(mcp251x);
+    }
+
+    return ret_val;
 }
 
 /* handles SPI address */
@@ -641,34 +676,58 @@ static inline uint8_t handle_spi_cmd(mcp251x_td *mcp251x, uint8_t spi_data)
             switch(sub_cmd)
             {
                 case 0:
-                    mcp251x->load_tx_addr_h = 3;
-                    mcp251x->load_tx_addr_l = 0;
+                    mcp251x->load_addr_h = 3;
+                    mcp251x->load_addr_l = 0;
                     break;
                 case 1:
-                    mcp251x->load_tx_addr_h = 3;
-                    mcp251x->load_tx_addr_l = 5;
+                    mcp251x->load_addr_h = 3;
+                    mcp251x->load_addr_l = 5;
                     break;
                 case 2:
-                    mcp251x->load_tx_addr_h = 4;
-                    mcp251x->load_tx_addr_l = 0;
+                    mcp251x->load_addr_h = 4;
+                    mcp251x->load_addr_l = 0;
                     break;
                 case 3:
-                    mcp251x->load_tx_addr_h = 4;
-                    mcp251x->load_tx_addr_l = 5;
+                    mcp251x->load_addr_h = 4;
+                    mcp251x->load_addr_l = 5;
                     break;
                 case 4:
-                    mcp251x->load_tx_addr_h = 5;
-                    mcp251x->load_tx_addr_l = 0;
+                    mcp251x->load_addr_h = 5;
+                    mcp251x->load_addr_l = 0;
                     break;
                 case 5:
-                    mcp251x->load_tx_addr_h = 5;
-                    mcp251x->load_tx_addr_l = 5;
+                    mcp251x->load_addr_h = 5;
+                    mcp251x->load_addr_l = 5;
                     break;
             }
             mcp251x->spi_state = mcp251x_SPI_STATE_SPI_LOAD_TX;
             break;
         case MCP251x_SPI_CMD_RX_STATUS_BASE:
             mcp251x->spi_state = mcp251x_SPI_STATE_SPI_READ_STATUS;
+            break;
+        case MCP251x_SPI_CMD_READ_RX_BUFFER_BASE:
+            mcp251x->spi_state = mcp251x_SPI_STATE_SPI_READ_RX_BUFFER;
+            int nm = (sub_cmd >> 1);
+            switch(nm)
+            {
+                case 0:
+                    mcp251x->load_addr_h = 6;
+                    mcp251x->load_addr_l = 0;
+                    break;
+                case 1:
+                    mcp251x->load_addr_h = 6;
+                    mcp251x->load_addr_l = 5;
+                    break;
+                case 2:
+                    mcp251x->load_addr_h = 7;
+                    mcp251x->load_addr_l = 0;
+                    break;
+                case 3:
+                    mcp251x->load_addr_h = 7;
+                    mcp251x->load_addr_l = 5;
+                    break;
+            }
+            spi_out = handle_read_rx_buffer(mcp251x);
             break;
         case MCP251x_SPI_CMD_RTS_BASE:
             txb = (sub_cmd & ~(MCP251x_SPI_CMD_RTS_MASK));
@@ -706,6 +765,9 @@ uint8_t mcp251x_spi_isr_handler(mcp251x_td *mcp251x, uint8_t spi_data)
             break;
         case mcp251x_SPI_STATE_SPI_LOAD_TX:
             handle_load_tx(mcp251x, spi_data);
+            break;
+        case mcp251x_SPI_STATE_SPI_READ_RX_BUFFER:
+            outdata = handle_read_rx_buffer(mcp251x);
             break;
         case mcp251x_SPI_STATE_SPI_READ_STATUS:
             outdata = 0;
@@ -825,6 +887,27 @@ void mcp251x_emu_handle_txb_error(mcp251x_td *mcp251x, MCP251x_CTRL_REGS txbnctr
     }
 }
 
+void mcp251x_emu_rx_data(mcp251x_td *mcp251x)
+{
+    mcp251x->rxb0[0] = 0x321 >> 3;
+    mcp251x->rxb0[1] = (0x321 & 7) << 5;
+    mcp251x->rxb0[2] = 0x3;
+    mcp251x->rxb0[3] = 0x21;
+    mcp251x->rxb0[4] = 0x8;
+    mcp251x->rxb0[5] = 0x42;
+    mcp251x->rxb0[6] = 0x43;
+    mcp251x->rxb0[7] = 0x44;
+    mcp251x->rxb0[8] = 0x45;
+    mcp251x->rxb0[9] = 0x46;
+    mcp251x->rxb0[10] = 0x47;
+    mcp251x->rxb0[11] = 0x48;
+    mcp251x->rxb0[12] = 0x49;
+
+    mcp251x_emu_set_irq_flag(mcp251x, INTERRUPT_RX0IF);
+    mcp251x->set_irq_cb(0);
+
+}
+
 
 /************************************************* DEBUG BUFFER TRACE *************************************************/
 #define DECODE_BIT(val, bitmask, name) (((val) & (bitmask)) ? (name) : "x")
@@ -839,19 +922,19 @@ void rx_buf_trace_queue_cb(void *priv)
     /* Validate msg_len to prevent buffer overread */
     if (msg_len > RX_TRACE_BUF_SIZE)
     {
-        printf("Error: Message length %d exceeds buffer size.\r\n", msg_len);
+        usart3_printf("Error: Message length %d exceeds buffer size.\r\n", msg_len);
         msg_len = RX_TRACE_BUF_SIZE; /* Adjust as needed */
     }
 
     // printf("WR: %u RD: %u ", rx_trace_buffer->buf_write_location, rx_trace_buffer->buf_read_location);
     for(int i = 0; i < msg_len; i++)
     {
-        printf("%02x ", rx_trace_buffer->trace_buf[rx_trace_buffer->buf_read_location].buf[i]);
+        usart3_printf("%02x ", rx_trace_buffer->trace_buf[rx_trace_buffer->buf_read_location].buf[i]);
         /* mark this buffer as read by setting the msg_len to 0 */
         rx_trace_buffer->trace_buf[rx_trace_buffer->buf_read_location].msg_len = 0;
     }
 
-    printf("\r\n");
+    usart3_printf("\r\n");
 
     rx_trace_buffer->buf_read_location = (rx_trace_buffer->buf_read_location + 1) % RX_TRACE_BUF_ELEMENTS;
 }
@@ -868,7 +951,7 @@ void mcp251x_emu_rx_trace_buf_add(trace_buffer_t *rx_trace_buffer)
 
     /* check if we are producing faster than the data can be read */
     if(rx_trace_buffer->trace_buf[rx_trace_buffer->buf_write_location].msg_len)
-        printf("Warning: Too much data to process!\r\n");
+        usart3_printf("Warning: Too much data to process!\r\n");
 
     task_queue_push(&rx_trace_buffer->buf_task_queue, rx_buf_trace_queue_cb, rx_trace_buffer);
 }
@@ -883,7 +966,7 @@ void mcp251x_emu_rx_trace_buf_add_data(trace_buffer_t *rx_trace_buffer, uint8_t 
     else 
     {
         /* Handle buffer overflow if necessary */
-        printf("Warning: RX buffer overflow. Data byte 0x%02x discarded.\r\n", indata);
+        usart3_printf("Warning: RX buffer overflow. Data byte 0x%02x discarded.\r\n", indata);
         /* Optionally, reset buf_count or implement other overflow handling */
     }
 }
