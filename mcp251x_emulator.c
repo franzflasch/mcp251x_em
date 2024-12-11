@@ -486,7 +486,6 @@ static inline void handle_load_tx(mcp251x_td *mcp251x, uint8_t spi_data)
 
     if(mcp251x->load_addr_l > MCP251x_TXB_RXB_REG_SIZE)
     {
-        mcp251x->load_addr_l = 0;
         mcp251x_reset_state(mcp251x);
     }
 }
@@ -514,10 +513,6 @@ static inline uint8_t handle_read_rx_buffer(mcp251x_td *mcp251x)
 
     if(mcp251x->load_addr_l >= MCP251x_TXB_RXB_REG_SIZE)
     {
-        mcp251x->load_addr_l = 0;
-
-        /* clear rx0if */
-        mcp251x->rx0if = 0;
         mcp251x_reset_state(mcp251x);
     }
 
@@ -653,10 +648,6 @@ static inline uint8_t handle_spi_cmd(mcp251x_td *mcp251x, uint8_t spi_data)
 
     switch(base_cmd)
     {
-        case MCP251x_SPI_CMD_RESET_BASE:
-            /* handle reset */
-            mcp251x_spi_cmd_reset(mcp251x);
-            break;
         case MCP251x_SPI_CMD_READ_WRITE_BIT_MODIFY_BASE:
             switch(sub_cmd)
             {
@@ -702,8 +693,14 @@ static inline uint8_t handle_spi_cmd(mcp251x_td *mcp251x, uint8_t spi_data)
             }
             mcp251x->spi_state = mcp251x_SPI_STATE_SPI_LOAD_TX;
             break;
-        case MCP251x_SPI_CMD_RX_STATUS_BASE:
-            mcp251x->spi_state = mcp251x_SPI_STATE_SPI_READ_STATUS;
+        case MCP251x_SPI_CMD_RTS_BASE:
+            txb = (sub_cmd & ~(MCP251x_SPI_CMD_RTS_MASK));
+            if(txb & MCP251x_SPI_CMD_RTS_TXB0_CMD)
+                task_queue_push(&mcp251x->can_tx_irq_queue, mcp251x->can_txb0_cb, NULL);
+            if(txb & MCP251x_SPI_CMD_RTS_TXB1_CMD)
+                task_queue_push(&mcp251x->can_tx_irq_queue, mcp251x->can_txb1_cb, NULL);
+            if(txb & MCP251x_SPI_CMD_RTS_TXB2_CMD)
+                task_queue_push(&mcp251x->can_tx_irq_queue, mcp251x->can_txb2_cb, NULL);
             break;
         case MCP251x_SPI_CMD_READ_RX_BUFFER_BASE:
             mcp251x->spi_state = mcp251x_SPI_STATE_SPI_READ_RX_BUFFER;
@@ -729,14 +726,12 @@ static inline uint8_t handle_spi_cmd(mcp251x_td *mcp251x, uint8_t spi_data)
             }
             spi_out = handle_read_rx_buffer(mcp251x);
             break;
-        case MCP251x_SPI_CMD_RTS_BASE:
-            txb = (sub_cmd & ~(MCP251x_SPI_CMD_RTS_MASK));
-            if(txb & MCP251x_SPI_CMD_RTS_TXB0_CMD)
-                task_queue_push(&mcp251x->can_tx_irq_queue, mcp251x->can_txb0_cb, NULL);
-            if(txb & MCP251x_SPI_CMD_RTS_TXB1_CMD)
-                task_queue_push(&mcp251x->can_tx_irq_queue, mcp251x->can_txb1_cb, NULL);
-            if(txb & MCP251x_SPI_CMD_RTS_TXB2_CMD)
-                task_queue_push(&mcp251x->can_tx_irq_queue, mcp251x->can_txb2_cb, NULL);
+        case MCP251x_SPI_CMD_RX_STATUS_BASE:
+            mcp251x->spi_state = mcp251x_SPI_STATE_SPI_READ_STATUS;
+            break;
+        case MCP251x_SPI_CMD_RESET_BASE:
+            /* handle reset */
+            mcp251x_spi_cmd_reset(mcp251x);
             break;
     }
 
@@ -766,11 +761,11 @@ uint8_t mcp251x_spi_isr_handler(mcp251x_td *mcp251x, uint8_t spi_data)
         case mcp251x_SPI_STATE_SPI_LOAD_TX:
             handle_load_tx(mcp251x, spi_data);
             break;
-        case mcp251x_SPI_STATE_SPI_READ_RX_BUFFER:
-            outdata = handle_read_rx_buffer(mcp251x);
-            break;
         case mcp251x_SPI_STATE_SPI_READ_STATUS:
             outdata = 0;
+            break;
+        case mcp251x_SPI_STATE_SPI_READ_RX_BUFFER:
+            outdata = handle_read_rx_buffer(mcp251x);
             break;
     }
 
@@ -779,6 +774,18 @@ uint8_t mcp251x_spi_isr_handler(mcp251x_td *mcp251x, uint8_t spi_data)
 
 void mcp251x_reset_state(mcp251x_td *mcp251x)
 {
+    mcp251x->merrf = 0;
+    mcp251x->wakif = 0;
+    mcp251x->errif = 0;
+    mcp251x->tx2if = 0;
+    mcp251x->tx1if = 0;
+    mcp251x->tx0if = 0;
+    mcp251x->rx1if = 0;
+    mcp251x->rx0if = 0;
+
+    mcp251x->load_addr_h = 0;
+    mcp251x->load_addr_l = 0;
+
     mcp251x->set_irq_cb(1);
     mcp251x->spi_state = mcp251x_SPI_STATE_SPI_CMD;
 }
