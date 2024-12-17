@@ -703,7 +703,6 @@ static inline uint8_t handle_spi_cmd(mcp251x_td *mcp251x, uint8_t spi_data)
                 task_queue_push(&mcp251x->can_tx_irq_queue, mcp251x->can_txb2_cb, NULL);
             break;
         case MCP251x_SPI_CMD_READ_RX_BUFFER_BASE:
-            mcp251x->spi_state = mcp251x_SPI_STATE_SPI_READ_RX_BUFFER;
             int nm = (sub_cmd >> 1);
             switch(nm)
             {
@@ -724,6 +723,7 @@ static inline uint8_t handle_spi_cmd(mcp251x_td *mcp251x, uint8_t spi_data)
                     mcp251x->load_addr_l = 5;
                     break;
             }
+            mcp251x->spi_state = mcp251x_SPI_STATE_SPI_READ_RX_BUFFER;
             spi_out = handle_read_rx_buffer(mcp251x);
             break;
         case MCP251x_SPI_CMD_RX_STATUS_BASE:
@@ -830,6 +830,31 @@ void mcp251x_emu_set_irq_flag(mcp251x_td *mcp251x, MCP251x_IRQ_FLAGS irq_flag)
     }
 }
 
+int mcp251x_emu_get_irq_flag(mcp251x_td *mcp251x, MCP251x_IRQ_FLAGS irq_flag)
+{
+    switch (irq_flag)
+    {
+        case INTERRUPT_MERRF:
+            return (mcp251x->merrf != 0);
+        case INTERRUPT_WAKIF:
+            return (mcp251x->wakif != 0);
+        case INTERRUPT_ERRIF:
+            return (mcp251x->errif != 0);
+        case INTERRUPT_TX2IF:
+            return (mcp251x->tx2if != 0);
+        case INTERRUPT_TX1IF:
+            return (mcp251x->tx1if != 0);
+        case INTERRUPT_TX0IF:
+            return (mcp251x->tx0if != 0);
+        case INTERRUPT_RX1IF:
+            return (mcp251x->rx1if != 0);
+        case INTERRUPT_RX0IF:
+            return (mcp251x->rx0if != 0);
+        default:
+            return 1;
+    }
+}
+
 void mcp251x_emu_handle_txb_done(mcp251x_td *mcp251x, MCP251x_IRQ_FLAGS txb)
 {
     mcp251x_emu_set_irq_flag(mcp251x, txb);
@@ -896,6 +921,12 @@ void mcp251x_emu_handle_txb_error(mcp251x_td *mcp251x, MCP251x_CTRL_REGS txbnctr
 
 void mcp251x_emu_rx_data(mcp251x_td *mcp251x)
 {
+    /* if the last receive buffer hasn't been collected
+     * we just return here.
+     */
+    if(mcp251x_emu_get_irq_flag(mcp251x, INTERRUPT_RX0IF))
+        return;
+
     mcp251x->rxb0[0] = 0x321 >> 3;
     mcp251x->rxb0[1] = (0x321 & 7) << 5;
     mcp251x->rxb0[2] = 0x3;
@@ -912,7 +943,6 @@ void mcp251x_emu_rx_data(mcp251x_td *mcp251x)
 
     mcp251x_emu_set_irq_flag(mcp251x, INTERRUPT_RX0IF);
     mcp251x->set_irq_cb(0);
-
 }
 
 
