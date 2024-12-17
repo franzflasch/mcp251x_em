@@ -398,6 +398,16 @@ static inline uint8_t canintf_read(mcp251x_td *mcp251x)
     if(mcp251x->rx1if) MCP251x_SET_BIT(outdata, MCP251x_CANINTF_RX1IF);
     if(mcp251x->rx0if) MCP251x_SET_BIT(outdata, MCP251x_CANINTF_RX0IF);
 
+    /* delete flags after reading */
+    mcp251x->merrf = 0;
+    mcp251x->wakif = 0;
+    mcp251x->errif = 0;
+    mcp251x->tx2if = 0;
+    mcp251x->tx1if = 0;
+    mcp251x->tx0if = 0;
+    mcp251x->rx1if = 0;
+    mcp251x->rx0if = 0;
+
     /* just return the value for now */
     return outdata;
 }
@@ -774,15 +784,6 @@ uint8_t mcp251x_spi_isr_handler(mcp251x_td *mcp251x, uint8_t spi_data)
 
 void mcp251x_reset_state(mcp251x_td *mcp251x)
 {
-    mcp251x->merrf = 0;
-    mcp251x->wakif = 0;
-    mcp251x->errif = 0;
-    mcp251x->tx2if = 0;
-    mcp251x->tx1if = 0;
-    mcp251x->tx0if = 0;
-    mcp251x->rx1if = 0;
-    mcp251x->rx0if = 0;
-
     mcp251x->load_addr_h = 0;
     mcp251x->load_addr_l = 0;
 
