@@ -150,7 +150,7 @@ void mcp251x_emu_can_tx_irq_process(mcp251x_td *mcp251x);
 void mcp251x_emu_set_irq_flag(mcp251x_td *mcp251x, MCP251x_IRQ_FLAGS irq_flag);
 void mcp251x_emu_handle_txb_done(mcp251x_td *mcp251x, MCP251x_IRQ_FLAGS txb);
 void mcp251x_emu_set_transmit_err_flag(mcp251x_td *mcp251x, MCP251x_CTRL_REGS txbnctrl, MCP251x_TXB_ERROR_FLAGS flag);
-void mcp251x_emu_rx_data(mcp251x_td *mcp251x);
+void mcp251x_emu_rx_data_rxb0(mcp251x_td *mcp251x);
 
 
 /* Buffer Configuration */

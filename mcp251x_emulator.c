@@ -920,7 +920,7 @@ void mcp251x_emu_handle_txb_error(mcp251x_td *mcp251x, MCP251x_CTRL_REGS txbnctr
     }
 }
 
-void mcp251x_emu_rx_data(mcp251x_td *mcp251x)
+void mcp251x_emu_rx_data_rxb0(mcp251x_td *mcp251x)
 {
     /* if the last receive buffer hasn't been collected
      * we just return here.
@@ -943,7 +943,9 @@ void mcp251x_emu_rx_data(mcp251x_td *mcp251x)
     mcp251x->rxb0[12] = 0x49;
 
     mcp251x_emu_set_irq_flag(mcp251x, INTERRUPT_RX0IF);
-    mcp251x->set_irq_cb(0);
+
+    if(mcp251x->rx0ie)
+        mcp251x->set_irq_cb(0);
 }
 
 
