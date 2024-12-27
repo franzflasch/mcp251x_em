@@ -748,8 +748,9 @@ static inline uint8_t handle_spi_cmd(mcp251x_td *mcp251x, uint8_t spi_data)
     return spi_out;
 }
 
-uint8_t mcp251x_spi_isr_handler(mcp251x_td *mcp251x, uint8_t spi_data)
+uint8_t mcp251x_spi_isr_handler(void *dev, uint8_t spi_data)
 {
+    mcp251x_td *mcp251x = dev;
     uint8_t outdata = 0;
 
     switch(mcp251x->spi_state)
@@ -782,12 +783,12 @@ uint8_t mcp251x_spi_isr_handler(mcp251x_td *mcp251x, uint8_t spi_data)
     return outdata;
 }
 
-void mcp251x_reset_state(mcp251x_td *mcp251x)
+void mcp251x_reset_state(void *dev)
 {
+    mcp251x_td *mcp251x = dev;
     mcp251x->load_addr_h = 0;
     mcp251x->load_addr_l = 0;
 
-    mcp251x->set_irq_cb(1);
     mcp251x->spi_state = mcp251x_SPI_STATE_SPI_CMD;
 }
 

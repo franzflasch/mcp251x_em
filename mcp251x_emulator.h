@@ -139,8 +139,8 @@ typedef struct mcp251x_struct
 } mcp251x_td;
 
 void mcp251x_emu_rx_buf_process(void);
-uint8_t mcp251x_spi_isr_handler(mcp251x_td *mcp251x, uint8_t spi_data);
-void mcp251x_reset_state(mcp251x_td *mcp251x);
+uint8_t mcp251x_spi_isr_handler(void *dev, uint8_t spi_data);
+void mcp251x_reset_state(void *dev);
 void mcp251x_spi_emu_init(mcp251x_td *mcp251x, 
                           void (*can_txb0_cb)(void *priv), 
                           void (*can_txb1_cb)(void *priv),
