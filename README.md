@@ -26,6 +26,35 @@ For guidance on integrating the emulator with an STM32F3 microcontroller, refer 
 mcp251x_emulator_stm32.c
 ```
 
+Dependencies: https://github.com/franzflasch/rem_packages/tree/master/OS/task_queue
+
+Currently events are queued in the ISR routine. So you need to pull and process those events in your main context.  
+Here is an example of how to initialize and handle the events in your main function:
+
+```
+mcp251x_td mcp251x = {0};
+
+int main(void)
+{
+    clock_setup();
+    led_setup();
+    gpio_setup();
+
+    mcp251x_stm32_init(&mcp251x);
+
+    while (1)
+    {
+        led_toggle();
+
+        /* process mcp251x events */
+        mcp251x_emu_can_tx_irq_process(&mcp251x);
+    }
+
+    return 0;
+}
+```
+
+
 ## Work in Progress (WIP)
 This project is currently a Work in Progress. Not all features are fully implemented yet. However, it has been successfully used in the following setup:
 
